@@ -1,352 +1,266 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Universal AI Chat - Gemini Pro Clone</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
-    <script src="https://unpkg.com/lucide@latest"></script>
-    <style>
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap');
-        
-        body { font-family: 'Inter', sans-serif; }
-        
-        /* Markdown Styling */
-        .prose pre { background: #1e1e1e; color: #d4d4d4; padding: 1rem; border-radius: 0.5rem; overflow-x: auto; margin: 0.5rem 0; }
-        .prose code { background: rgba(0,0,0,0.1); padding: 0.2rem 0.4rem; border-radius: 0.25rem; font-size: 0.875em; }
-        .dark .prose code { background: rgba(255,255,255,0.1); }
-        
-        /* Custom Scrollbar */
-        ::-webkit-scrollbar { width: 5px; }
-        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
-        .dark ::-webkit-scrollbar-thumb { background: #475569; }
-
-        #loading {
-            position: fixed; inset: 0; background: white; z-index: 9999;
-            display: flex; align-items: center; justify-content: center; font-weight: 500;
-        }
-        .dark #loading { background: #0f172a; color: white; }
-        
-        .chat-container { height: calc(100vh - 140px); }
-        @media (max-width: 768px) { .chat-container { height: calc(100dvh - 130px); } }
-
-        /* Sidebar Transition */
-        #sidebar { transition: transform 0.3s ease-in-out; }
-    </style>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"/>
+  <title>Cinematic Vertical Edit System — Hollywood Level • Free 2026</title>
+  <style>
+    body {
+      margin: 0;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: #0f0f0f;
+      color: #e0e0e0;
+      line-height: 1.6;
+    }
+    header {
+      background: linear-gradient(to bottom, #1a1a2e, #0f0f1a);
+      padding: 2rem 1rem;
+      text-align: center;
+      border-bottom: 1px solid #333;
+    }
+    h1 {
+      margin: 0;
+      font-size: 2.1rem;
+      color: #ff3366;
+      text-shadow: 0 0 20px rgba(255,51,102,0.4);
+    }
+    .tagline {
+      font-size: 1.1rem;
+      opacity: 0.9;
+      margin-top: 0.5rem;
+    }
+    nav {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 0.8rem;
+      padding: 1.2rem;
+      background: #111;
+    }
+    nav a {
+      background: #222;
+      color: #ff3366;
+      padding: 0.7rem 1.4rem;
+      border-radius: 2rem;
+      text-decoration: none;
+      font-weight: bold;
+      transition: all 0.3s;
+    }
+    nav a:hover {
+      background: #ff3366;
+      color: white;
+    }
+    section {
+      padding: 2rem 1.2rem;
+      max-width: 920px;
+      margin: 0 auto;
+    }
+    h2 {
+      color: #ff6699;
+      border-bottom: 2px solid #333;
+      padding-bottom: 0.6rem;
+      margin-bottom: 1.2rem;
+    }
+    .tool-stack {
+      background: #1a1a1a;
+      padding: 1.4rem;
+      border-radius: 12px;
+      margin: 1rem 0;
+      border: 1px solid #444;
+    }
+    .step {
+      background: #222;
+      padding: 1.2rem;
+      margin: 1rem 0;
+      border-left: 5px solid #ff3366;
+      border-radius: 0 8px 8px 0;
+    }
+    .setting {
+      font-family: monospace;
+      background: #000;
+      padding: 0.4rem 0.8rem;
+      border-radius: 6px;
+      color: #0f0;
+    }
+    .warning {
+      color: #ffcc00;
+      font-weight: bold;
+    }
+    pre {
+      background: #000;
+      padding: 1rem;
+      border-radius: 10px;
+      overflow-x: auto;
+      font-size: 0.95rem;
+    }
+    footer {
+      text-align: center;
+      padding: 2rem;
+      font-size: 0.9rem;
+      opacity: 0.7;
+      border-top: 1px solid #333;
+    }
+  </style>
 </head>
-<body class="bg-gray-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 transition-colors duration-200">
+<body>
 
-    <div id="loading">Initialising Hollywood-Grade UI...</div>
+<header>
+  <h1>Cinematic Vertical Edit System</h1>
+  <p class="tagline">Hollywood-grade • Mobile-first 9:16 • 100% Free Tools • Netflix-trailer feel — 2026 Edition</p>
+</header>
 
-    <div class="flex min-h-screen overflow-hidden">
-        <aside id="sidebar" class="fixed inset-y-0 left-0 z-50 w-72 bg-white dark:bg-slate-900 border-r border-slate-200 dark:border-slate-800 transform -translate-x-full md:translate-x-0 md:relative">
-            <div class="flex flex-col h-full">
-                <div class="p-4 flex items-center justify-between">
-                    <button onclick="createNewChat()" class="flex items-center gap-2 w-full bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 p-3 rounded-xl transition-all font-medium">
-                        <i data-lucide="plus" class="w-5 h-5"></i> New Chat
-                    </button>
-                    <button onclick="toggleSidebar()" class="md:hidden p-2">
-                        <i data-lucide="x" class="w-6 h-6"></i>
-                    </button>
-                </div>
-                
-                <div id="chat-history" class="flex-1 overflow-y-auto px-3 space-y-1">
-                    </div>
+<nav>
+  <a href="#stack">Tool Stack</a>
+  <a href="#workflow">Workflow</a>
+  <a href="#structure">Story Structure</a>
+  <a href="#techniques">Pro Techniques</a>
+  <a href="#grading">Color & Audio</a>
+  <a href="#example">Sample Edit Plan</a>
+  <a href="#alt">Alternative Approach</a>
+</nav>
 
-                <div class="p-4 border-t border-slate-200 dark:border-slate-800">
-                    <button onclick="openSettings()" class="flex items-center gap-3 w-full p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg">
-                        <i data-lucide="settings" class="w-5 h-5"></i> Settings
-                    </button>
-                    <button onclick="toggleDarkMode()" class="flex items-center gap-3 w-full p-2 mt-1 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg">
-                        <i data-lucide="moon" id="dark-icon" class="w-5 h-5"></i> <span>Theme</span>
-                    </button>
-                </div>
-            </div>
-        </aside>
+<section id="stack">
+  <h2>Core Free Tool Stack (No Watermark • Mobile Optimized)</h2>
+  <div class="tool-stack">
+    <strong>Primary Editor</strong>: CapCut (iOS / Android) — Free tier exports 4K 60fps vertical, no watermark<br>
+    <strong>Audio Library</strong>: CapCut built-in free music + Pixabay / FreeMusicArchive (download & import)<br>
+    <strong>Effects / Overlays</strong>: CapCut free effects + free Pexels stock (light leaks, grain 35mm overlays)<br>
+    <strong>Subtitles / Typography</strong>: CapCut auto-captions (human-edit mode) + manual text keyframes<br>
+    <strong>Asset Sources</strong>: Pexels.com, Pixabay.com, Mixkit.co (100% free, commercial-use clips/SFX)<br>
+    <strong>Backup / Export Check</strong>: Phone Gallery → Files app (verify safe zones on 9:16 preview)
+  </div>
+</section>
 
-        <main class="flex-1 flex flex-col relative w-full h-screen">
-            <header class="h-16 flex items-center justify-between px-4 border-b border-slate-200 dark:border-slate-800 bg-white/80 dark:bg-slate-900/80 backdrop-blur-md sticky top-0 z-10">
-                <div class="flex items-center gap-3">
-                    <button onclick="toggleSidebar()" class="md:hidden p-2">
-                        <i data-lucide="menu" class="w-6 h-6"></i>
-                    </button>
-                    <h1 class="font-semibold text-lg" id="current-chat-title">Gemini Universal</h1>
-                </div>
-                <div class="text-xs font-mono text-slate-400" id="model-badge">deepseek-r1:free</div>
-            </header>
+<section id="workflow">
+  <h2>Mobile-First Cinematic Workflow</h2>
+  <div class="step">
+    <strong>1. Project Setup</strong><br>
+    Open CapCut → New Project → Select 9:16 Canvas (Vertical / Reels / Shorts)<br>
+    <span class="warning">Never use 16:9 then crop — start native 9:16 for safe centering.</span>
+  </div>
+  <div class="step">
+    <strong>2. Import & Organize</strong><br>
+    Import clips → Create folders: A-roll (main), B-roll (cutaways), SFX, Music, Overlays
+  </div>
+  <div class="step">
+    <strong>3. Rough Cut to Structure</strong><br>
+    Lay timeline using mandatory structure below → Cut on emotional beats
+  </div>
+</section>
 
-            <div id="chat-box" class="chat-container overflow-y-auto p-4 md:p-8 space-y-6">
-                <div id="welcome-screen" class="h-full flex flex-col items-center justify-center text-center space-y-4 opacity-50">
-                    <i data-lucide="sparkles" class="w-12 h-12 text-blue-500"></i>
-                    <h2 class="text-2xl font-light">How can I help you today?</h2>
-                </div>
-            </div>
+<section id="structure">
+  <h2>Mandatory Story Structure — Trailer/Promo Rhythm</h2>
+  <div class="step">
+    <strong>HOOK (0–3 s)</strong><br>
+    Strongest visual + bass hit / impact SFX<br>
+    No title card • Face or dramatic reveal centered in upper 2/3
+  </div>
+  <div class="step">
+    <strong>BUILD (4–70% duration)</strong><br>
+    Visual change ≤ every 3–5 seconds<br>
+    Emotional curve: curiosity → tension → connection<br>
+    Use J-cuts (audio leads picture) for natural flow
+  </div>
+  <div class="step">
+    <strong>PEAK (80–90%)</strong><br>
+    Biggest music drop + slowest / fastest moment sync<br>
+    Wide-to-tight zoom or dramatic match cut
+  </div>
+  <div class="step">
+    <strong>CTA / LANDING (last 10%)</strong><br>
+    Music resolve (major chord or fade)<br>
+    Minimal text fade-in (3–5 words max) • Hold 2–3 s
+  </div>
+</section>
 
-            <div class="p-4 bg-transparent backdrop-blur-sm">
-                <div class="max-w-4xl mx-auto relative">
-                    <div class="flex items-end gap-2 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-2xl p-2 shadow-lg focus-within:ring-2 ring-blue-500/50 transition-all">
-                        <textarea id="user-input" rows="1" placeholder="Ask Gemini anything..." 
-                            class="flex-1 bg-transparent border-none focus:ring-0 p-2 resize-none max-h-40 outline-none"></textarea>
-                        <button id="send-btn" class="bg-blue-600 hover:bg-blue-700 text-white p-2 rounded-xl transition-all disabled:opacity-50">
-                            <i data-lucide="send" class="w-5 h-5"></i>
-                        </button>
-                    </div>
-                </div>
-            </div>
-        </main>
-    </div>
+<section id="techniques">
+  <h2>Advanced Free Techniques in CapCut</h2>
+  <div class="step">
+    <strong>J-cut / L-cut</strong>: Drag audio track longer/shorter than video → natural dialogue bleed
+  </div>
+  <div class="step">
+    <strong>Match Cut</strong>: Cut on similar shape/motion (e.g. eye → sun) — manual split & align
+  </div>
+  <div class="step">
+    <strong>Speed Ramp</strong>: Select clip → Speed → Curve → Add keyframes (0.5x slow → 2x push)
+  </div>
+  <div class="step">
+    <strong>Film Grain + Light Leak</strong>: Import free 35mm grain PNG → Overlay blend mode: Overlay / Soft Light → Opacity 15–25%
+  </div>
+  <div class="step">
+    <strong>Motion Blur Simulation</strong>: Effects → Basic → Motion Blur → Keyframe intensity on fast pans
+  </div>
+  <div class="step">
+    <strong>Whoosh / Bass Reveal</strong>: Search CapCut SFX "whoosh cinematic" or import free bass hit → Sync to cut
+  </div>
+</section>
 
-    <div id="settings-modal" class="hidden fixed inset-0 z-[100] flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
-        <div class="bg-white dark:bg-slate-900 w-full max-w-md rounded-2xl shadow-2xl p-6">
-            <h3 class="text-xl font-bold mb-4">API Configuration</h3>
-            <div class="space-y-4">
-                <div>
-                    <label class="block text-sm font-medium mb-1">OpenRouter API Key</label>
-                    <input type="password" id="api-key-input" class="w-full p-2 rounded-lg border dark:bg-slate-800 dark:border-slate-700">
-                </div>
-                <div>
-                    <label class="block text-sm font-medium mb-1">Model Name</label>
-                    <input type="text" id="model-input" placeholder="deepseek/deepseek-r1:free" class="w-full p-2 rounded-lg border dark:bg-slate-800 dark:border-slate-700">
-                </div>
-                <div>
-                    <label class="block text-sm font-medium mb-1">System Prompt</label>
-                    <textarea id="system-prompt" class="w-full p-2 rounded-lg border dark:bg-slate-800 dark:border-slate-700" rows="3"></textarea>
-                </div>
-                <div class="flex gap-2 pt-4">
-                    <button onclick="saveSettings()" class="flex-1 bg-blue-600 text-white py-2 rounded-lg font-bold">Save Changes</button>
-                    <button onclick="closeSettings()" class="flex-1 bg-slate-200 dark:bg-slate-700 py-2 rounded-lg">Cancel</button>
-                </div>
-            </div>
-        </div>
-    </div>
+<section id="grading">
+  <h2>Emotion-Driven Color + Audio Strategy</h2>
+  <div class="step">
+    <strong>Color Grading (Free LUTs & Manual)</strong><br>
+    Adjust → Basic → Temperature: -5 to +10 (cool=tension, warm=nostalgia)<br>
+    Contrast +15–30 • Shadow +10 • Highlight -10<br>
+    Saturation -5 to -15 (cinematic desaturated look)<br>
+    Add free "Cinematic" or "Teal & Orange" filter → Reduce intensity 40–60%<br>
+    Vignette (Effects → Basic) → Strength 20–35 → Focus center face
+  </div>
+  <div class="step">
+    <strong>Audio Design</strong><br>
+    Music: Search CapCut "Cinematic Emotional" / "Trailer Epic" (free library)<br>
+    Curve: Start low → Build → Peak drop → Resolve fade<br>
+    Dialogue: Extract → Noise Reduction (Audio tab) → Volume normalize -6dB LUFS<br>
+    Layers: Ambient bed (-18dB) + SFX (-12dB) + Music master (-9 to -12dB peak)
+  </div>
+  <div class="step">
+    <strong>Typography Rules</strong><br>
+    Font: "Montserrat Bold" or "Bebas Neue" (free in CapCut)<br>
+    Size: 8–12% of height • Center safe zone (upper 60%)<br>
+    Animation: Fade in + subtle scale-up (keyframes) only on emotional words
+  </div>
+</section>
 
-    <script>
-        // --- State Management ---
-        let state = {
-            apiKey: localStorage.getItem('api_key') || '',
-            model: localStorage.getItem('model') || 'deepseek/deepseek-r1:free',
-            systemPrompt: localStorage.getItem('system_prompt') || 'You are a helpful assistant.',
-            chats: JSON.parse(localStorage.getItem('chats')) || [],
-            activeChatId: null,
-            isDarkMode: localStorage.getItem('dark_mode') === 'true'
-        };
+<section id="example">
+  <h2>Example: 15-Second Netflix-Style Promo Edit Plan</h2>
+  <pre>
+HOOK (0–3s)
+• Clip: Dramatic close-up eye open + whoosh SFX
+• Music: Low drone swell → bass hit at 2.8s
+• Grading: Cool Teal push, heavy vignette
 
-        const chatBox = document.getElementById('chat-box');
-        const userInput = document.getElementById('user-input');
-        const sendBtn = document.getElementById('send-btn');
-        const sidebar = document.getElementById('sidebar');
+BUILD (3–10s)
+• J-cut dialogue: "Everything changes tonight..." (audio starts 0.4s early)
+• 4 quick cuts: wide landscape → running feet → gun cock → face reveal
+• Speed ramp 80% → 40% on gun cock
+• Match cut: gun barrel → tunnel light
 
-        // --- Initialization ---
-        window.onload = () => {
-            lucide.createIcons();
-            applyTheme();
-            renderHistory();
-            document.getElementById('loading').style.display = 'none';
-            
-            // Auto-resize textarea
-            userInput.oninput = function() {
-                this.style.height = 'auto';
-                this.style.height = (this.scrollHeight) + 'px';
-            };
-        };
+PEAK (10–13s)
+• Slow-mo reveal (0.4x) + music drop
+• Overlay light leak + film grain 25%
+• Text: "COMING 2026" (fade + scale 110%)
 
-        // --- Core Functions ---
-        function applyTheme() {
-            if (state.isDarkMode) document.documentElement.classList.add('dark');
-            else document.documentElement.classList.remove('dark');
-            const icon = state.isDarkMode ? 'sun' : 'moon';
-            document.getElementById('dark-icon').setAttribute('data-lucide', icon);
-            lucide.createIcons();
-        }
+CTA (13–15s)
+• Music resolve to soft pad
+• Text: "Watch Now • Link in Bio" (hold 2s, center safe)
+• Fade to black 0.6s
+  </pre>
+  <p><strong>Platform Notes</strong>: Export 1080p 60fps H.264 • Bitrate High • Keep under 100 MB for fast upload</p>
+</section>
 
-        function toggleDarkMode() {
-            state.isDarkMode = !state.isDarkMode;
-            localStorage.setItem('dark_mode', state.isDarkMode);
-            applyTheme();
-        }
+<section id="alt">
+  <h2>Alternative Edit Approach — Minimalist Emotional Arc</h2>
+  <div class="step">
+    Longer takes (5–8s) • Heavy use of slow push-in zooms<br>
+    Single color grade: Warm orange-teal split-tone<br>
+    One emotional track (piano + strings swell)<br>
+    Text only at peak & CTA — no mid-roll captions<br>
+    End with 1.5s black + subtle logo fade if needed
+  </div>
+</section>
 
-        function toggleSidebar() {
-            sidebar.classList.toggle('-translate-x-full');
-        }
+<footer>
+  Built for mobile cinematic excellence • 100% free execution • Save & revisit on phone
+</footer>
 
-        function openSettings() {
-            document.getElementById('api-key-input').value = state.apiKey;
-            document.getElementById('model-input').value = state.model;
-            document.getElementById('system-prompt').value = state.systemPrompt;
-            document.getElementById('settings-modal').classList.remove('hidden');
-        }
-
-        function closeSettings() {
-            document.getElementById('settings-modal').classList.add('hidden');
-        }
-
-        function saveSettings() {
-            state.apiKey = document.getElementById('api-key-input').value;
-            state.model = document.getElementById('model-input').value || 'deepseek/deepseek-r1:free';
-            state.systemPrompt = document.getElementById('system-prompt').value;
-            
-            localStorage.setItem('api_key', state.apiKey);
-            localStorage.setItem('model', state.model);
-            localStorage.setItem('system_prompt', state.systemPrompt);
-            
-            document.getElementById('model-badge').innerText = state.model;
-            closeSettings();
-        }
-
-        function createNewChat() {
-            const newChat = {
-                id: Date.now(),
-                title: 'New Chat',
-                messages: []
-            };
-            state.chats.unshift(newChat);
-            state.activeChatId = newChat.id;
-            saveChats();
-            renderHistory();
-            renderMessages();
-            if (window.innerWidth < 768) toggleSidebar();
-        }
-
-        function saveChats() {
-            localStorage.setItem('chats', JSON.stringify(state.chats));
-        }
-
-        function renderHistory() {
-            const historyContainer = document.getElementById('chat-history');
-            historyContainer.innerHTML = state.chats.map(chat => `
-                <div class="group flex items-center justify-between p-2 rounded-lg cursor-pointer ${state.activeChatId === chat.id ? 'bg-blue-100 dark:bg-blue-900/30' : 'hover:bg-slate-100 dark:hover:bg-slate-800'}" onclick="switchChat(${chat.id})">
-                    <div class="flex items-center gap-2 overflow-hidden">
-                        <i data-lucide="message-square" class="w-4 h-4 shrink-0"></i>
-                        <span class="truncate text-sm">${chat.title}</span>
-                    </div>
-                    <button onclick="deleteChat(event, ${chat.id})" class="opacity-0 group-hover:opacity-100 p-1 hover:text-red-500">
-                        <i data-lucide="trash-2" class="w-4 h-4"></i>
-                    </button>
-                </div>
-            `).join('');
-            lucide.createIcons();
-        }
-
-        function switchChat(id) {
-            state.activeChatId = id;
-            renderMessages();
-            renderHistory();
-        }
-
-        function deleteChat(e, id) {
-            e.stopPropagation();
-            state.chats = state.chats.filter(c => c.id !== id);
-            if (state.activeChatId === id) state.activeChatId = null;
-            saveChats();
-            renderHistory();
-            renderMessages();
-        }
-
-        function renderMessages() {
-            const chat = state.chats.find(c => c.id === state.activeChatId);
-            if (!chat) {
-                chatBox.innerHTML = document.getElementById('welcome-screen').outerHTML;
-                document.getElementById('current-chat-title').innerText = "Gemini Universal";
-                return;
-            }
-
-            document.getElementById('current-chat-title').innerText = chat.title;
-            chatBox.innerHTML = chat.messages.map(m => `
-                <div class="flex ${m.role === 'user' ? 'justify-end' : 'justify-start'} animate-in fade-in slide-in-from-bottom-2 duration-300">
-                    <div class="max-w-[85%] md:max-w-[70%] p-4 rounded-2xl ${m.role === 'user' ? 'bg-blue-600 text-white rounded-tr-none' : 'bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-tl-none'} shadow-sm">
-                        <div class="prose dark:prose-invert text-sm md:text-base leading-relaxed">
-                            ${marked.parse(m.content)}
-                        </div>
-                    </div>
-                </div>
-            `).join('');
-            chatBox.scrollTo({ top: chatBox.scrollHeight, behavior: 'smooth' });
-            lucide.createIcons();
-        }
-
-        // --- AI Logic (Streaming) ---
-        async function sendMessage() {
-            const content = userInput.value.trim();
-            if (!content || !state.apiKey) {
-                if (!state.apiKey) openSettings();
-                return;
-            }
-
-            if (!state.activeChatId) createNewChat();
-            
-            const chat = state.chats.find(c => c.id === state.activeChatId);
-            
-            // Set first message as title
-            if (chat.messages.length === 0) chat.title = content.substring(0, 30);
-
-            chat.messages.push({ role: 'user', content });
-            userInput.value = '';
-            userInput.style.height = 'auto';
-            renderMessages();
-
-            // Prepare AI placeholder
-            const aiMsg = { role: 'assistant', content: '' };
-            chat.messages.push(aiMsg);
-            renderMessages();
-            
-            const lastMsgDiv = chatBox.lastElementChild.querySelector('.prose');
-
-            try {
-                const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
-                    method: "POST",
-                    headers: {
-                        "Authorization": `Bearer ${state.apiKey}`,
-                        "Content-Type": "application/json"
-                    },
-                    body: JSON.stringify({
-                        model: state.model,
-                        messages: [
-                            { role: "system", content: state.systemPrompt },
-                            ...chat.messages.slice(0, -1)
-                        ],
-                        stream: true
-                    })
-                });
-
-                const reader = response.body.getReader();
-                const decoder = new TextDecoder();
-                
-                while (true) {
-                    const { done, value } = await reader.read();
-                    if (done) break;
-                    
-                    const chunk = decoder.decode(value);
-                    const lines = chunk.split('\n');
-                    
-                    for (const line of lines) {
-                        if (line.startsWith('data: ')) {
-                            try {
-                                const data = JSON.parse(line.slice(6));
-                                const token = data.choices[0].delta.content || '';
-                                aiMsg.content += token;
-                                lastMsgDiv.innerHTML = marked.parse(aiMsg.content);
-                                chatBox.scrollTop = chatBox.scrollHeight;
-                            } catch (e) {}
-                        }
-                    }
-                }
-                saveChats();
-            } catch (error) {
-                aiMsg.content = "Error: " + error.message;
-                renderMessages();
-            }
-        }
-
-        // --- Event Listeners ---
-        sendBtn.addEventListener('click', sendMessage);
-        userInput.addEventListener('keydown', (e) => {
-            if (e.key === 'Enter' && !e.shiftKey) {
-                e.preventDefault();
-                sendMessage();
-            }
-        });
-
-    </script>
 </body>
 </html>
