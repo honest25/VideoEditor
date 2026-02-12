@@ -2,22 +2,36 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>CineStudio | Project Master</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>CineStudio Ultimate | Hybrid Pro Editor</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <style>
         :root { --accent: #fbbf24; --bg: #050505; --panel: #111; }
         body { background: var(--bg); color: #eee; font-family: 'Inter', sans-serif; height: 100vh; overflow: hidden; margin: 0; }
+        
+        /* Studio Layout */
         .studio-root { display: grid; grid-template-columns: 320px 1fr 320px; grid-template-rows: 60px 1fr 280px; height: 100vh; }
+        
+        /* Preview Engine */
         .preview-box { background: radial-gradient(circle, #1a1a1a 0%, #000 100%); display: flex; flex-direction: column; align-items: center; justify-content: center; position: relative; border: 1px solid #222; }
         canvas { background: #000; box-shadow: 0 0 100px rgba(0,0,0,0.8); }
+
+        /* Timeline UI */
         .timeline-box { grid-column: 1 / span 3; background: #0a0a0a; border-top: 2px solid #222; overflow-x: auto; position: relative; }
         .track { height: 50px; border-bottom: 1px solid #1a1a1a; position: relative; min-width: 5000px; display: flex; align-items: center; }
-        .clip-item { height: 35px; border-radius: 4px; position: absolute; cursor: pointer; display: flex; align-items: center; padding: 0 10px; font-size: 10px; font-weight: bold; }
+        .clip-item { height: 35px; border-radius: 4px; position: absolute; cursor: pointer; display: flex; align-items: center; padding: 0 10px; font-size: 10px; font-weight: bold; overflow: hidden; white-space: nowrap; }
+        
+        /* Clip Styling */
         .v-clip { background: linear-gradient(90deg, #1e40af, #3b82f6); border: 1px solid #60a5fa; }
         .i-clip { background: linear-gradient(90deg, #6b21a8, #a855f7); border: 1px solid #c084fc; }
-        .playhead { width: 2px; height: 100%; background: #ff0000; position: absolute; left: 0; z-index: 100; pointer-events: none; }
+        .a-clip { background: linear-gradient(90deg, #065f46, #10b981); border: 1px solid #34d399; }
+        
+        .playhead { width: 2px; height: 100%; background: #ff0000; position: absolute; left: 0; z-index: 100; pointer-events: none; box-shadow: 0 0 8px #ff0000; }
+        
+        /* Custom UI */
+        select, input[type="text"] { background: #1a1a1a; border: 1px solid #333; color: white; border-radius: 4px; padding: 4px 8px; font-size: 12px; }
+        input[type="range"] { accent-color: var(--accent); }
     </style>
 </head>
 <body>
@@ -25,79 +39,98 @@
 <div class="studio-root">
     <header class="col-span-3 border-b border-zinc-800 flex items-center justify-between px-6 bg-black">
         <div class="flex items-center gap-4">
-            <i class="fa-solid fa-clapperboard text-amber-500 text-xl"></i>
-            <input type="text" id="project-name" value="Untitled_Hollywood_Project" class="bg-transparent border-none text-sm font-bold focus:ring-0 w-64 text-zinc-300">
+            <i class="fa-solid fa-film text-amber-500 text-xl"></i>
+            <input type="text" id="project-name" value="MY_HOLLYWOOD_EDIT_01" class="focus:border-amber-500 outline-none w-64 uppercase tracking-tighter font-black">
         </div>
-        <div class="flex items-center gap-6">
-            <div class="flex items-center gap-2">
-                <span class="text-[10px] text-zinc-500 uppercase font-black">Aspect:</span>
-                <select id="ratio-select" onchange="setRatio(this.value)" class="bg-zinc-900 text-xs border border-zinc-700 px-2 py-1 rounded">
+        <div class="flex items-center gap-4">
+            <div class="bg-zinc-900 px-3 py-1 rounded-md border border-zinc-800 flex gap-3 items-center">
+                <span class="text-[10px] font-bold text-zinc-500 uppercase">Aspect Ratio:</span>
+                <select id="ratio-select" onchange="setRatio(this.value)">
                     <option value="16/9">16:9 Cinema</option>
-                    <option value="9/16">9:16 Vertical</option>
+                    <option value="9/16">9:16 Vertical (Reels)</option>
                     <option value="1/1">1:1 Square</option>
                 </select>
             </div>
-            <button onclick="startExport()" class="bg-amber-500 text-black px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-tighter hover:bg-white transition-all">Render Master</button>
+            <button onclick="startExport()" class="bg-amber-500 text-black px-6 py-1.5 rounded-full text-[10px] font-black uppercase hover:bg-white transition-all">Render Master</button>
         </div>
     </header>
 
     <aside class="p-4 border-r border-zinc-800 space-y-6 overflow-y-auto">
-        <div>
-            <span class="text-[10px] font-black text-zinc-500 uppercase">Unified Media Pool</span>
-            <label class="block mt-2 bg-zinc-800 hover:bg-zinc-700 p-3 rounded text-center text-[10px] cursor-pointer font-bold border-2 border-dashed border-zinc-700">
-                <i class="fa-solid fa-plus block mb-1 text-lg"></i> ADD VIDEO/IMAGE
-                <input type="file" id="media-loader" hidden multiple accept="video/*,image/*">
+        <section>
+            <span class="text-[10px] font-black text-zinc-500 uppercase tracking-widest">Media Pool</span>
+            <label class="block mt-2 bg-zinc-800 hover:bg-zinc-700 p-4 rounded text-center text-[10px] cursor-pointer font-bold border-2 border-dashed border-zinc-600 transition-all">
+                <i class="fa-solid fa-cloud-arrow-up block mb-2 text-xl"></i> ADD VIDEO / IMAGE
+                <input type="file" id="v-loader" hidden multiple accept="video/*,image/*">
             </label>
-        </div>
-        <div id="media-list" class="space-y-2"></div>
+            <label class="block mt-2 bg-blue-900/20 hover:bg-blue-900/40 p-3 rounded text-center text-[10px] cursor-pointer font-bold border border-blue-500/30 text-blue-400 transition-all">
+                <i class="fa-solid fa-music mr-2"></i> IMPORT AUDIO
+                <input type="file" id="a-loader" hidden accept="audio/*">
+            </label>
+        </section>
+        <div id="asset-list" class="space-y-2 mt-4 max-h-[40vh] overflow-y-auto"></div>
     </aside>
 
     <main class="preview-box">
         <canvas id="main-canvas"></canvas>
-        <div class="absolute bottom-4 flex gap-6 bg-black/80 px-8 py-3 rounded-full border border-white/10 backdrop-blur-md">
-            <button onclick="togglePlay()"><i class="fa-solid fa-play text-amber-500 text-xl" id="play-btn"></i></button>
+        <div class="absolute bottom-6 flex gap-8 bg-black/80 px-10 py-4 rounded-full border border-white/10 backdrop-blur-xl">
+            <button onclick="seek(0)" class="text-zinc-400 hover:text-white"><i class="fa-solid fa-backward-step"></i></button>
+            <button onclick="togglePlay()"><i class="fa-solid fa-play text-amber-500 text-2xl" id="play-btn"></i></button>
+            <button onclick="activeMedia.currentTime += 5" class="text-zinc-400 hover:text-white"><i class="fa-solid fa-forward-step"></i></button>
         </div>
     </main>
 
-    <aside class="p-4 border-l border-zinc-800 space-y-6">
+    <aside class="p-4 border-l border-zinc-800 overflow-y-auto space-y-6">
         <div>
-            <h3 class="text-[10px] font-black text-amber-500 uppercase mb-3">Display Mode (Canva Style)</h3>
-            <select id="display-mode" class="w-full bg-zinc-900 border border-zinc-700 p-2 text-xs rounded">
-                <option value="fit">Fit to Screen</option>
-                <option value="fill">Fill (Crop to Frame)</option>
-                <option value="stretch">Stretch (Distort)</option>
+            <h3 class="text-[10px] font-black text-amber-500 uppercase mb-3 tracking-widest">Image Display Mode</h3>
+            <select id="display-mode" class="w-full">
+                <option value="fit">Fit (Letterbox)</option>
+                <option value="fill">Fill (Hollywood Zoom)</option>
+                <option value="stretch">Stretch (Manual)</option>
             </select>
         </div>
-        <div class="p-4 bg-zinc-900 rounded-lg">
-            <h3 class="text-[10px] font-black text-blue-400 uppercase mb-2">Manual Trimming</h3>
-            <div class="flex flex-col gap-2">
-                <button onclick="trimClip('start')" class="w-full py-2 bg-zinc-800 rounded text-[9px] uppercase hover:bg-red-900/40">Set Start</button>
-                <button onclick="trimClip('end')" class="w-full py-2 bg-zinc-800 rounded text-[9px] uppercase hover:bg-red-900/40">Set End</button>
+
+        <div class="p-4 bg-zinc-900/50 rounded-lg border border-zinc-800">
+            <h3 class="text-[10px] font-black text-green-500 uppercase mb-3 tracking-widest">Delta Keyer (Chroma)</h3>
+            <div class="flex gap-2 items-center mb-3">
+                <input type="color" id="k-color" value="#00ff00" class="w-12 h-8 bg-transparent">
+                <input type="range" id="k-tol" class="w-full" min="0" max="200" value="100">
             </div>
+            <button onclick="chromaActive=!chromaActive" id="k-toggle" class="w-full py-2 bg-green-900/20 text-green-500 border border-green-500/50 text-[9px] font-black uppercase">Enable Green Screen</button>
+        </div>
+
+        <div>
+            <h3 class="text-[10px] font-black text-blue-400 uppercase mb-3 tracking-widest">Audio Mixer</h3>
+            <label class="text-[9px] opacity-50 uppercase">Master Volume</label>
+            <input type="range" id="vol-mix" class="w-full mb-3" min="0" max="2" step="0.1" value="1">
+            <label class="text-[9px] opacity-50 uppercase">Pitch / Speed Shift</label>
+            <input type="range" id="pitch-mix" class="w-full" min="0.5" max="2" step="0.1" value="1">
         </div>
     </aside>
 
     <footer class="timeline-box" id="timeline">
         <div class="playhead" id="playhead"></div>
-        <div class="track" id="vt-1"><div class="sticky left-0 bg-zinc-900 px-3 text-[9px] h-full flex items-center border-r border-zinc-700">MASTER TRACK</div></div>
-        <div class="track" id="at-1"><div class="sticky left-0 bg-zinc-900 px-3 text-[9px] h-full flex items-center border-r border-zinc-700">AUDIO TRACK</div></div>
+        <div class="track" id="vt-1"><div class="sticky left-0 bg-zinc-900 px-4 text-[9px] font-black h-full flex items-center border-r border-zinc-800 z-20">VISUAL</div></div>
+        <div class="track" id="at-1"><div class="sticky left-0 bg-zinc-900 px-4 text-[9px] font-black h-full flex items-center border-r border-zinc-800 z-20">AUDIO</div></div>
     </footer>
 </div>
 
 <script>
     const canvas = document.getElementById('main-canvas'), ctx = canvas.getContext('2d');
-    let activeMedia = null, mediaType = null, isPlaying = false;
+    let activeMedia = null, activeAudio = null, mediaType = null, isPlaying = false, chromaActive = false;
+    let chunks = [];
 
-    function setRatio(rString) {
-        const r = eval(rString);
+    // --- SYSTEM INITIALIZATION ---
+    function setRatio(val) {
+        const r = eval(val);
         if(r > 1) { canvas.width = 1920; canvas.height = 1080; }
         else if(r < 1) { canvas.width = 1080; canvas.height = 1920; }
         else { canvas.width = 1080; canvas.height = 1080; }
-        canvas.style.height = "80%"; canvas.style.aspectRatio = rString;
+        canvas.style.height = "80%"; canvas.style.aspectRatio = val;
     }
     setRatio("16/9");
 
-    document.getElementById('media-loader').onchange = e => {
+    // --- UNIFIED MEDIA PIPELINE ---
+    document.getElementById('v-loader').onchange = e => {
         const file = e.target.files[0];
         const url = URL.createObjectURL(file);
         mediaType = file.type.split('/')[0];
@@ -110,51 +143,89 @@
             activeMedia = new Image();
             activeMedia.src = url;
         }
-
-        const div = document.createElement('div');
-        div.className = `clip-item ${mediaType === 'video' ? 'v-clip' : 'i-clip'}`;
-        div.style.left = "100px"; div.style.width = "300px";
-        div.innerText = file.name;
-        document.getElementById('vt-1').appendChild(div);
+        addClipToTimeline(file.name, mediaType === 'video' ? 'v-clip' : 'i-clip', 'vt-1');
     };
 
-    function drawMedia() {
-        if (!activeMedia) return;
-        const mode = document.getElementById('display-mode').value;
-        const cw = canvas.width, ch = canvas.height;
-        const iw = activeMedia.videoWidth || activeMedia.width;
-        const ih = activeMedia.videoHeight || activeMedia.height;
+    document.getElementById('a-loader').onchange = e => {
+        const file = e.target.files[0];
+        activeAudio = new Audio(URL.createObjectURL(file));
+        addClipToTimeline(file.name, 'a-clip', 'at-1');
+    };
 
-        ctx.clearRect(0,0,cw,ch);
+    function addClipToTimeline(name, className, trackId) {
+        const div = document.createElement('div');
+        div.className = `clip-item ${className}`;
+        div.style.left = "50px"; div.style.width = "400px";
+        div.innerText = name;
+        document.getElementById(trackId).appendChild(div);
         
-        if (mode === 'stretch') {
-            ctx.drawImage(activeMedia, 0, 0, cw, ch);
-        } else if (mode === 'fit' || mode === 'fill') {
-            let scale = (mode === 'fit') ? Math.min(cw/iw, ch/ih) : Math.max(cw/iw, ch/ih);
-            let nw = iw * scale, nh = ih * scale;
-            let nx = (cw - nw) / 2, ny = (ch - nh) / 2;
-            ctx.drawImage(activeMedia, nx, ny, nw, nh);
-        }
+        const asset = document.createElement('div');
+        asset.className = "bg-zinc-900 p-2 text-[9px] rounded truncate border border-zinc-800";
+        asset.innerText = "📄 " + name;
+        document.getElementById('asset-list').appendChild(asset);
     }
 
+    // --- RENDERING CORE (DAVINCI/CANVA) ---
     function renderLoop() {
-        if(isPlaying || mediaType === 'image') drawMedia();
-        if(mediaType === 'video' && isPlaying) {
-            document.getElementById('playhead').style.left = (activeMedia.currentTime / activeMedia.duration * 1000) + "px";
+        if(activeMedia) {
+            const mode = document.getElementById('display-mode').value;
+            const cw = canvas.width, ch = canvas.height;
+            const iw = activeMedia.videoWidth || activeMedia.width;
+            const ih = activeMedia.videoHeight || activeMedia.height;
+
+            ctx.clearRect(0,0,cw,ch);
+
+            // Display Mode Logic
+            if(mode === 'stretch') {
+                ctx.drawImage(activeMedia, 0, 0, cw, ch);
+            } else {
+                let scale = (mode === 'fit') ? Math.min(cw/iw, ch/ih) : Math.max(cw/iw, ch/ih);
+                let nw = iw * scale, nh = ih * scale;
+                let nx = (cw - nw) / 2, ny = (ch - nh) / 2;
+                ctx.drawImage(activeMedia, nx, ny, nw, nh);
+            }
+
+            // Hollywood Chroma Key
+            if(chromaActive) {
+                let f = ctx.getImageData(0,0,cw,ch), d = f.data;
+                const hex = document.getElementById('k-color').value;
+                const rK=parseInt(hex.slice(1,3),16), gK=parseInt(hex.slice(3,5),16), bK=parseInt(hex.slice(5,7),16);
+                const tol = document.getElementById('k-tol').value;
+                for(let i=0; i<d.length; i+=4) {
+                    if(Math.sqrt((d[i]-rK)**2+(d[i+1]-gK)**2+(d[i+2]-bK)**2) < tol) d[i+3]=0;
+                }
+                ctx.putImageData(f,0,0);
+            }
+
+            // Playhead Sync
+            if(mediaType === 'video' && isPlaying) {
+                document.getElementById('playhead').style.left = (activeMedia.currentTime / activeMedia.duration * 1000) + "px";
+            }
         }
         requestAnimationFrame(renderLoop);
     }
 
+    // --- PLAYBACK & AUDIO ---
     function togglePlay() {
         isPlaying = !isPlaying;
         if(mediaType === 'video') isPlaying ? activeMedia.play() : activeMedia.pause();
-        document.getElementById('play-btn').className = isPlaying ? "fa-solid fa-pause text-amber-500 text-xl" : "fa-solid fa-play text-amber-500 text-xl";
+        if(activeAudio) isPlaying ? activeAudio.play() : activeAudio.pause();
+        document.getElementById('play-btn').className = isPlaying ? "fa-solid fa-pause text-amber-500 text-2xl" : "fa-solid fa-play text-amber-500 text-2xl";
     }
 
+    document.getElementById('vol-mix').oninput = e => { if(activeAudio) activeAudio.volume = e.target.value; };
+    document.getElementById('pitch-mix').oninput = e => { if(activeAudio) { activeAudio.playbackRate = e.target.value; activeAudio.preservesPitch = false; }};
+
+    function seek(val) {
+        if(activeMedia) activeMedia.currentTime = val;
+        if(activeAudio) activeAudio.currentTime = val;
+    }
+
+    // --- MASTER RENDER EXPORT ---
     async function startExport() {
         const stream = canvas.captureStream(60);
         const rec = new MediaRecorder(stream, { mimeType: 'video/webm', bitsPerSecond: 8000000 });
-        let chunks = [];
+        chunks = [];
         rec.ondataavailable = e => chunks.push(e.data);
         rec.onstop = () => {
             const blob = new Blob(chunks, {type:'video/webm'});
@@ -164,8 +235,8 @@
             a.click();
         };
         rec.start();
-        alert("Recording 5 seconds of the current canvas...");
-        setTimeout(() => rec.stop(), 5000);
+        alert("RENDERING IN PROGRESS: Outputting 10 seconds of master grade footage...");
+        setTimeout(() => rec.stop(), 10000);
     }
 
     renderLoop();
