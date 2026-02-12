@@ -3,183 +3,172 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>CineStudio Pro | Ultimate Hybrid Editor</title>
+    <title>CineStudio | Project Master</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <style>
-        :root { --accent: #fbbf24; --bg: #080808; --panel: #121212; }
-        body { background: var(--bg); color: #ddd; font-family: 'Inter', sans-serif; height: 100vh; overflow: hidden; }
-        .studio-grid { display: grid; grid-template-columns: 300px 1fr 320px; grid-template-rows: 1fr 300px; height: 100vh; }
-        .preview-box { background: #000; position: relative; display: flex; align-items: center; justify-content: center; overflow: hidden; border: 1px solid #222; }
-        canvas { background: #000; box-shadow: 0 0 50px rgba(0,0,0,0.5); transition: all 0.3s ease; }
-        .timeline { grid-column: 1 / span 3; background: #0a0a0a; border-top: 2px solid #222; overflow-x: auto; position: relative; }
-        .track { height: 45px; border-bottom: 1px solid #1a1a1a; display: flex; align-items: center; position: relative; min-width: 5000px; }
-        .clip-item { height: 35px; border-radius: 4px; position: absolute; cursor: pointer; display: flex; align-items: center; padding: 0 10px; font-size: 10px; font-weight: bold; overflow: hidden; }
-        .video-clip { background: linear-gradient(90deg, #1e40af, #3b82f6); border: 1px solid #60a5fa; }
-        .audio-clip { background: linear-gradient(90deg, #065f46, #10b981); border: 1px solid #34d399; }
+        :root { --accent: #fbbf24; --bg: #050505; --panel: #111; }
+        body { background: var(--bg); color: #eee; font-family: 'Inter', sans-serif; height: 100vh; overflow: hidden; margin: 0; }
+        .studio-root { display: grid; grid-template-columns: 320px 1fr 320px; grid-template-rows: 60px 1fr 280px; height: 100vh; }
+        .preview-box { background: radial-gradient(circle, #1a1a1a 0%, #000 100%); display: flex; flex-direction: column; align-items: center; justify-content: center; position: relative; border: 1px solid #222; }
+        canvas { background: #000; box-shadow: 0 0 100px rgba(0,0,0,0.8); }
+        .timeline-box { grid-column: 1 / span 3; background: #0a0a0a; border-top: 2px solid #222; overflow-x: auto; position: relative; }
+        .track { height: 50px; border-bottom: 1px solid #1a1a1a; position: relative; min-width: 5000px; display: flex; align-items: center; }
+        .clip-item { height: 35px; border-radius: 4px; position: absolute; cursor: pointer; display: flex; align-items: center; padding: 0 10px; font-size: 10px; font-weight: bold; }
+        .v-clip { background: linear-gradient(90deg, #1e40af, #3b82f6); border: 1px solid #60a5fa; }
+        .i-clip { background: linear-gradient(90deg, #6b21a8, #a855f7); border: 1px solid #c084fc; }
         .playhead { width: 2px; height: 100%; background: #ff0000; position: absolute; left: 0; z-index: 100; pointer-events: none; }
     </style>
 </head>
 <body>
 
-<div class="studio-grid">
-    <aside class="p-4 border-r border-zinc-800 space-y-4 overflow-y-auto">
-        <div class="flex justify-between items-center">
-            <span class="text-[10px] font-black tracking-widest text-zinc-500 uppercase">Media Pool</span>
-            <label class="bg-amber-500 text-black px-2 py-1 rounded text-[10px] font-bold cursor-pointer">
-                ADD MEDIA <input type="file" id="media-input" hidden multiple accept="video/*,audio/*,image/*">
+<div class="studio-root">
+    <header class="col-span-3 border-b border-zinc-800 flex items-center justify-between px-6 bg-black">
+        <div class="flex items-center gap-4">
+            <i class="fa-solid fa-clapperboard text-amber-500 text-xl"></i>
+            <input type="text" id="project-name" value="Untitled_Hollywood_Project" class="bg-transparent border-none text-sm font-bold focus:ring-0 w-64 text-zinc-300">
+        </div>
+        <div class="flex items-center gap-6">
+            <div class="flex items-center gap-2">
+                <span class="text-[10px] text-zinc-500 uppercase font-black">Aspect:</span>
+                <select id="ratio-select" onchange="setRatio(this.value)" class="bg-zinc-900 text-xs border border-zinc-700 px-2 py-1 rounded">
+                    <option value="16/9">16:9 Cinema</option>
+                    <option value="9/16">9:16 Vertical</option>
+                    <option value="1/1">1:1 Square</option>
+                </select>
+            </div>
+            <button onclick="startExport()" class="bg-amber-500 text-black px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-tighter hover:bg-white transition-all">Render Master</button>
+        </div>
+    </header>
+
+    <aside class="p-4 border-r border-zinc-800 space-y-6 overflow-y-auto">
+        <div>
+            <span class="text-[10px] font-black text-zinc-500 uppercase">Unified Media Pool</span>
+            <label class="block mt-2 bg-zinc-800 hover:bg-zinc-700 p-3 rounded text-center text-[10px] cursor-pointer font-bold border-2 border-dashed border-zinc-700">
+                <i class="fa-solid fa-plus block mb-1 text-lg"></i> ADD VIDEO/IMAGE
+                <input type="file" id="media-loader" hidden multiple accept="video/*,image/*">
             </label>
         </div>
         <div id="media-list" class="space-y-2"></div>
     </aside>
 
     <main class="preview-box">
-        <div class="absolute top-4 left-4 z-20 flex gap-2">
-            <button onclick="setRatio(16/9)" class="bg-zinc-800 px-2 py-1 rounded text-[10px]">16:9</button>
-            <button onclick="setRatio(9/16)" class="bg-zinc-800 px-2 py-1 rounded text-[10px]">9:16</button>
-            <button onclick="setRatio(1/1)" class="bg-zinc-800 px-2 py-1 rounded text-[10px]">1:1</button>
-        </div>
         <canvas id="main-canvas"></canvas>
-        <div class="absolute bottom-4 flex gap-4 bg-black/60 p-2 px-6 rounded-full backdrop-blur-md">
-            <button onclick="togglePlay()"><i class="fa-solid fa-play" id="play-icon"></i></button>
-            <button onclick="startExport()" class="text-xs font-bold text-amber-500 uppercase">Render Master</button>
+        <div class="absolute bottom-4 flex gap-6 bg-black/80 px-8 py-3 rounded-full border border-white/10 backdrop-blur-md">
+            <button onclick="togglePlay()"><i class="fa-solid fa-play text-amber-500 text-xl" id="play-btn"></i></button>
         </div>
     </main>
 
-    <aside class="p-4 border-l border-zinc-800 overflow-y-auto space-y-6">
+    <aside class="p-4 border-l border-zinc-800 space-y-6">
         <div>
-            <h3 class="text-[10px] font-bold text-amber-500 uppercase mb-4">Audio Controls</h3>
-            <label class="text-[10px] opacity-50 uppercase">Volume</label>
-            <input type="range" id="vol-ctrl" class="w-full mb-2" min="0" max="2" step="0.1" value="1">
-            <label class="text-[10px] opacity-50 uppercase">Pitch</label>
-            <input type="range" id="pitch-ctrl" class="w-full" min="0.5" max="2" step="0.1" value="1">
+            <h3 class="text-[10px] font-black text-amber-500 uppercase mb-3">Display Mode (Canva Style)</h3>
+            <select id="display-mode" class="w-full bg-zinc-900 border border-zinc-700 p-2 text-xs rounded">
+                <option value="fit">Fit to Screen</option>
+                <option value="fill">Fill (Crop to Frame)</option>
+                <option value="stretch">Stretch (Distort)</option>
+            </select>
         </div>
-        <div>
-            <h3 class="text-[10px] font-bold text-blue-500 uppercase mb-4">Transitions & Fades</h3>
-            <div class="flex gap-2">
-                <button onclick="applyFade('in')" class="flex-1 bg-zinc-900 py-2 text-[10px] rounded hover:bg-zinc-800">FADE IN</button>
-                <button onclick="applyFade('out')" class="flex-1 bg-zinc-900 py-2 text-[10px] rounded hover:bg-zinc-800">FADE OUT</button>
-            </div>
-        </div>
-        <div class="p-3 bg-zinc-900 rounded border border-zinc-800">
-            <h3 class="text-[10px] font-bold text-green-500 uppercase mb-2">Trimming</h3>
+        <div class="p-4 bg-zinc-900 rounded-lg">
+            <h3 class="text-[10px] font-black text-blue-400 uppercase mb-2">Manual Trimming</h3>
             <div class="flex flex-col gap-2">
-                <button onclick="trimClip('start')" class="text-[10px] bg-red-900/20 text-red-500 p-1 rounded border border-red-500/30">Trim Start to Playhead</button>
-                <button onclick="trimClip('end')" class="text-[10px] bg-red-900/20 text-red-500 p-1 rounded border border-red-500/30">Trim End to Playhead</button>
+                <button onclick="trimClip('start')" class="w-full py-2 bg-zinc-800 rounded text-[9px] uppercase hover:bg-red-900/40">Set Start</button>
+                <button onclick="trimClip('end')" class="w-full py-2 bg-zinc-800 rounded text-[9px] uppercase hover:bg-red-900/40">Set End</button>
             </div>
         </div>
     </aside>
 
-    <footer class="timeline" id="timeline-container">
+    <footer class="timeline-box" id="timeline">
         <div class="playhead" id="playhead"></div>
-        <div class="track" id="v-track"><span class="sticky left-0 bg-zinc-900 px-2 text-[9px] z-10">VIDEO</span></div>
-        <div class="track" id="a-track"><span class="sticky left-0 bg-zinc-900 px-2 text-[9px] z-10">AUDIO</span></div>
+        <div class="track" id="vt-1"><div class="sticky left-0 bg-zinc-900 px-3 text-[9px] h-full flex items-center border-r border-zinc-700">MASTER TRACK</div></div>
+        <div class="track" id="at-1"><div class="sticky left-0 bg-zinc-900 px-3 text-[9px] h-full flex items-center border-r border-zinc-700">AUDIO TRACK</div></div>
     </footer>
 </div>
 
 <script>
-    const canvas = document.getElementById('main-canvas');
-    const ctx = canvas.getContext('2d');
-    const mediaInput = document.getElementById('media-input');
-    let currentVideo = null, currentAudio = null;
-    let isPlaying = false;
-    let fadeAlpha = 1;
+    const canvas = document.getElementById('main-canvas'), ctx = canvas.getContext('2d');
+    let activeMedia = null, mediaType = null, isPlaying = false;
 
-    // --- SETUP RATIO (Canva/Kine Style) ---
-    function setRatio(val) {
-        if(val > 1) { canvas.width = 1920; canvas.height = 1080; } // 16:9
-        else if(val < 1) { canvas.width = 1080; canvas.height = 1920; } // 9:16
-        else { canvas.width = 1080; canvas.height = 1080; } // 1:1
-        canvas.style.aspectRatio = val;
+    function setRatio(rString) {
+        const r = eval(rString);
+        if(r > 1) { canvas.width = 1920; canvas.height = 1080; }
+        else if(r < 1) { canvas.width = 1080; canvas.height = 1920; }
+        else { canvas.width = 1080; canvas.height = 1080; }
+        canvas.style.height = "80%"; canvas.style.aspectRatio = rString;
     }
-    setRatio(16/9);
+    setRatio("16/9");
 
-    // --- MEDIA & MERGE LOGIC ---
-    mediaInput.onchange = (e) => {
-        Array.from(e.target.files).forEach(file => {
-            const url = URL.createObjectURL(file);
-            const type = file.type.split('/')[0];
-            createTimelineClip(file.name, type, url);
-        });
+    document.getElementById('media-loader').onchange = e => {
+        const file = e.target.files[0];
+        const url = URL.createObjectURL(file);
+        mediaType = file.type.split('/')[0];
+        
+        if(mediaType === 'video') {
+            activeMedia = document.createElement('video');
+            activeMedia.src = url; activeMedia.loop = true; activeMedia.muted = true;
+            activeMedia.play();
+        } else {
+            activeMedia = new Image();
+            activeMedia.src = url;
+        }
+
+        const div = document.createElement('div');
+        div.className = `clip-item ${mediaType === 'video' ? 'v-clip' : 'i-clip'}`;
+        div.style.left = "100px"; div.style.width = "300px";
+        div.innerText = file.name;
+        document.getElementById('vt-1').appendChild(div);
     };
 
-    function createTimelineClip(name, type, url) {
-        const div = document.createElement('div');
-        div.className = `clip-item ${type === 'video' ? 'video-clip' : 'audio-clip'}`;
-        div.style.width = "200px";
-        div.style.left = "50px";
-        div.innerText = name;
-        document.getElementById(type === 'video' ? 'v-track' : 'a-track').appendChild(div);
+    function drawMedia() {
+        if (!activeMedia) return;
+        const mode = document.getElementById('display-mode').value;
+        const cw = canvas.width, ch = canvas.height;
+        const iw = activeMedia.videoWidth || activeMedia.width;
+        const ih = activeMedia.videoHeight || activeMedia.height;
 
-        if(type === 'video') {
-            currentVideo = document.createElement('video');
-            currentVideo.src = url;
-            currentVideo.muted = true; // Audio handled separately
-        } else if(type === 'audio') {
-            currentAudio = new Audio(url);
-            currentAudio.preservesPitch = false; // For pitch shifting
+        ctx.clearRect(0,0,cw,ch);
+        
+        if (mode === 'stretch') {
+            ctx.drawImage(activeMedia, 0, 0, cw, ch);
+        } else if (mode === 'fit' || mode === 'fill') {
+            let scale = (mode === 'fit') ? Math.min(cw/iw, ch/ih) : Math.max(cw/iw, ch/ih);
+            let nw = iw * scale, nh = ih * scale;
+            let nx = (cw - nw) / 2, ny = (ch - nh) / 2;
+            ctx.drawImage(activeMedia, nx, ny, nw, nh);
         }
     }
 
-    // --- ENGINE LOOP ---
-    function render() {
-        if(currentVideo && isPlaying) {
-            ctx.globalAlpha = fadeAlpha;
-            ctx.drawImage(currentVideo, 0, 0, canvas.width, canvas.height);
-            updatePlayhead();
+    function renderLoop() {
+        if(isPlaying || mediaType === 'image') drawMedia();
+        if(mediaType === 'video' && isPlaying) {
+            document.getElementById('playhead').style.left = (activeMedia.currentTime / activeMedia.duration * 1000) + "px";
         }
-        requestAnimationFrame(render);
+        requestAnimationFrame(renderLoop);
     }
 
-    // --- AUDIO & EFFECTS (DaVinci/Adobe Style) ---
-    document.getElementById('vol-ctrl').oninput = (e) => { if(currentAudio) currentAudio.volume = e.target.value; };
-    document.getElementById('pitch-ctrl').oninput = (e) => { if(currentAudio) currentAudio.playbackRate = e.target.value; };
-
-    function applyFade(type) {
-        let val = type === 'in' ? 0 : 1;
-        const intv = setInterval(() => {
-            val += type === 'in' ? 0.05 : -0.05;
-            fadeAlpha = val;
-            if(val >= 1 || val <= 0) clearInterval(intv);
-        }, 50);
-    }
-
-    // --- PLAYBACK ---
     function togglePlay() {
         isPlaying = !isPlaying;
-        if(isPlaying) {
-            if(currentVideo) currentVideo.play();
-            if(currentAudio) currentAudio.play();
-            document.getElementById('play-icon').className = "fa-solid fa-pause";
-        } else {
-            if(currentVideo) currentVideo.pause();
-            if(currentAudio) currentAudio.pause();
-            document.getElementById('play-icon').className = "fa-solid fa-play";
-        }
+        if(mediaType === 'video') isPlaying ? activeMedia.play() : activeMedia.pause();
+        document.getElementById('play-btn').className = isPlaying ? "fa-solid fa-pause text-amber-500 text-xl" : "fa-solid fa-play text-amber-500 text-xl";
     }
 
-    function updatePlayhead() {
-        if(!currentVideo) return;
-        const progress = (currentVideo.currentTime / currentVideo.duration) * 1000;
-        document.getElementById('playhead').style.left = progress + 'px';
-    }
-
-    // --- EXPORT MASTER ---
     async function startExport() {
         const stream = canvas.captureStream(60);
-        const recorder = new MediaRecorder(stream, { mimeType: 'video/webm', bitsPerSecond: 5000000 });
+        const rec = new MediaRecorder(stream, { mimeType: 'video/webm', bitsPerSecond: 8000000 });
         let chunks = [];
-        recorder.ondataavailable = e => chunks.push(e.data);
-        recorder.onstop = () => {
-            const blob = new Blob(chunks, { type: 'video/webm' });
-            const url = URL.createObjectURL(blob);
-            const a = document.createElement('a'); a.href = url; a.download = 'Master_Render.webm'; a.click();
+        rec.ondataavailable = e => chunks.push(e.data);
+        rec.onstop = () => {
+            const blob = new Blob(chunks, {type:'video/webm'});
+            const a = document.createElement('a');
+            a.href = URL.createObjectURL(blob);
+            a.download = document.getElementById('project-name').value + '.webm';
+            a.click();
         };
-        recorder.start();
-        setTimeout(() => recorder.stop(), 5000); // 5 sec render demo
+        rec.start();
+        alert("Recording 5 seconds of the current canvas...");
+        setTimeout(() => rec.stop(), 5000);
     }
 
-    render();
+    renderLoop();
 </script>
 </body>
 </html>
