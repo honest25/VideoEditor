@@ -3,176 +3,255 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>StreamCut Pro | Native GPU Editor</title>
+    <title>CinemaStudio Pro | Hollywood Engine</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;700&display=swap');
-        body { font-family: 'Inter', sans-serif; background: #000; color: #fff; overflow: hidden; }
+        @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&family=Inter:wght@300;400;600&display=swap');
+        body { font-family: 'Inter', sans-serif; background: #08080a; color: #eee; overflow: hidden; }
+        .cinema-font { font-family: 'Orbitron', sans-serif; }
         
-        /* The Video Container */
-        .viewport {
-            box-shadow: 0 0 100px rgba(37, 99, 235, 0.2);
-            background: #0a0a0a;
-            aspect-ratio: 16/9;
-            width: 100%;
-            max-width: 900px;
+        /* High-End Viewport */
+        .preview-box {
+            background: #000;
+            box-shadow: 0 0 40px rgba(0,0,0,1), 0 0 20px rgba(59, 130, 246, 0.2);
+            border: 1px solid rgba(255,255,255,0.05);
+            position: relative;
         }
 
-        #loading {
-            position: fixed; inset: 0; background: #000; z-index: 99;
-            display: flex; flex-direction: column; items: center; justify-content: center;
-        }
+        /* Timeline Styling */
+        .timeline-container { background: #0f0f12; border-top: 1px solid #1f1f23; }
+        .track { height: 40px; background: rgba(255,255,255,0.02); margin-bottom: 4px; border-radius: 4px; position: relative; }
+        .clip { position: absolute; height: 100%; border-radius: 4px; display: flex; align-items: center; padding: 0 10px; font-size: 10px; font-weight: bold; cursor: pointer; }
+        .video-clip { background: linear-gradient(90deg, #1e40af, #3b82f6); border: 1px solid #60a5fa; }
+        .audio-clip { background: linear-gradient(90deg, #065f46, #10b981); border: 1px solid #34d399; }
 
-        /* High-speed scrubber */
-        input[type=range]::-webkit-slider-thumb {
-            appearance: none; width: 2px; height: 120px; background: #ef4444; cursor: col-resize;
-        }
+        input[type=range] { appearance: none; background: transparent; width: 100%; }
+        input[type=range]::-webkit-slider-thumb { appearance: none; width: 2px; height: 200px; background: #ff0000; z-index: 50; position: relative; }
+        
+        #loader { position: fixed; inset: 0; background: #08080a; z-index: 100; display: flex; flex-direction: column; align-items: center; justify-content: center; }
     </style>
 </head>
 <body>
 
-    <div id="loading">
-        <div class="w-10 h-10 border-4 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
-        <p class="mt-4 text-xs tracking-widest text-blue-500 font-bold uppercase">Waking GPU...</p>
+    <div id="loader">
+        <div class="w-16 h-1 w-64 bg-zinc-800 rounded-full overflow-hidden">
+            <div class="h-full bg-blue-600 animate-[pulse_1s_infinite]"></div>
+        </div>
+        <h2 class="cinema-font text-xs mt-4 tracking-[0.5em] text-blue-500">CINEMASTUDIO PRO</h2>
     </div>
 
-    <div id="app" class="hidden flex flex-col h-screen">
-        <header class="h-14 px-6 flex items-center justify-between border-b border-white/10 bg-zinc-950">
-            <div class="flex items-center gap-2">
-                <div class="w-6 h-6 bg-blue-600 rounded"></div>
-                <h1 class="font-bold tracking-tighter">STREAMCUT <span class="text-blue-500">NATIVE</span></h1>
-            </div>
-            <div class="flex gap-3">
-                <button onclick="document.getElementById('file-in').click()" class="text-xs font-bold px-4 py-2 bg-white text-black rounded hover:bg-gray-200">IMPORT</button>
-                <button onclick="exportScene()" class="text-xs font-bold px-4 py-2 bg-blue-600 rounded hover:bg-blue-700">EXPORT</button>
-            </div>
-        </header>
-
-        <main class="flex-1 flex flex-col items-center justify-center p-6 bg-zinc-900">
-            <div class="viewport rounded-lg overflow-hidden relative">
-                <canvas id="view" class="w-full h-full object-contain"></canvas>
-                <div id="play-overlay" onclick="togglePlay()" class="absolute inset-0 flex items-center justify-center bg-black/40 opacity-0 hover:opacity-100 cursor-pointer transition">
-                    <svg id="play-btn" class="w-20 h-20 fill-white" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+    <div id="app" class="hidden h-screen flex flex-col">
+        <nav class="h-14 px-6 flex items-center justify-between border-b border-white/5 bg-black/40 backdrop-blur-md">
+            <div class="flex items-center gap-4">
+                <span class="cinema-font text-blue-500 font-bold tracking-widest text-lg">CP</span>
+                <div class="h-4 w-px bg-white/10"></div>
+                <div class="flex gap-4">
+                    <button onclick="triggerFile('v-upload')" class="text-[10px] font-bold hover:text-blue-400">ADD VIDEO</button>
+                    <button onclick="triggerFile('a-upload')" class="text-[10px] font-bold hover:text-green-400">ADD MUSIC</button>
                 </div>
             </div>
-            
-            <div class="mt-8 flex gap-6 px-6 py-3 bg-black rounded-full border border-white/10">
-                <button onclick="setFx('none')" class="text-[10px] font-bold text-zinc-500 hover:text-white">RAW</button>
-                <button onclick="setFx('grayscale(1)')" class="text-[10px] font-bold text-zinc-500 hover:text-white">MONO</button>
-                <button onclick="setFx('sepia(1) contrast(1.2)')" class="text-[10px] font-bold text-zinc-500 hover:text-white">VINTAGE</button>
-                <button onclick="setFx('hue-rotate(90deg)')" class="text-[10px] font-bold text-zinc-500 hover:text-white">DREAM</button>
-            </div>
+            <button onclick="exportHollywood()" class="bg-blue-600 hover:bg-blue-500 text-white px-6 py-1 rounded text-xs font-bold transition-all shadow-[0_0_15px_rgba(37,99,235,0.4)]">RENDER VIDEO</button>
+        </nav>
+
+        <main class="flex-1 flex overflow-hidden">
+            <aside class="w-16 border-r border-white/5 flex flex-col items-center py-6 gap-8 bg-black/20">
+                <button onclick="setEffect('none')" title="Original"><svg class="w-5 h-5 opacity-50 hover:opacity-100" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8z"/></svg></button>
+                <button onclick="setEffect('sepia(0.8) contrast(1.2)')" title="Vintage"><svg class="w-5 h-5 text-orange-400" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2L4.5 20.29l.71.71L12 18l6.79 3 .71-.71z"/></svg></button>
+                <button onclick="setEffect('grayscale(1) brightness(0.8)')" title="Noir"><svg class="w-5 h-5 text-zinc-400" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 17.93c-3.94-.49-7-3.85-7-7.93s3.06-7.44 7-7.93v15.86z"/></svg></button>
+            </aside>
+
+            <section class="flex-1 flex flex-col items-center justify-center p-8 bg-[#0c0c0e]">
+                <div class="preview-box w-full max-w-4xl rounded-lg overflow-hidden">
+                    <canvas id="main-canvas" class="w-full h-full"></canvas>
+                    <div id="fade-layer" class="absolute inset-0 bg-black pointer-events-none opacity-0"></div>
+                </div>
+                
+                <div class="mt-6 flex items-center gap-8">
+                    <button onclick="jump(-5)" class="text-zinc-500 hover:text-white">-5s</button>
+                    <button onclick="toggleMasterPlay()" class="w-12 h-12 bg-white rounded-full flex items-center justify-center text-black">
+                        <svg id="play-icon" class="w-6 h-6" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+                    </button>
+                    <button onclick="jump(5)" class="text-zinc-500 hover:text-white">+5s</button>
+                </div>
+            </section>
         </main>
 
-        <footer class="h-48 bg-zinc-950 border-t border-white/10 p-4 relative">
-            <div class="flex justify-between text-[10px] font-mono text-zinc-500 mb-2">
-                <span id="timer">00:00:00</span>
-                <span>TIMELINE V1</span>
-            </div>
-            
-            <div class="relative h-24 bg-zinc-900 rounded border border-white/5 overflow-hidden">
-                <div id="clip-ui" class="hidden absolute top-2 bottom-2 left-0 bg-blue-600/20 border-x-2 border-blue-500 flex items-center px-4 text-[10px] font-bold">
-                    PROCESSING_VIDEO.MP4
+        <footer class="timeline-container h-64 p-4 flex flex-col">
+            <div class="flex justify-between items-center mb-4">
+                <div class="flex gap-4 text-[10px] font-bold tracking-widest text-zinc-500">
+                    <span id="time-now" class="text-blue-500">00:00:00</span>
+                    <span id="time-total">00:00:00</span>
                 </div>
-                <input type="range" id="scrub" step="0.01" value="0" class="absolute inset-0 z-30 opacity-0 cursor-col-resize">
-                <div id="head" class="absolute top-0 bottom-0 w-px bg-red-500 z-20 pointer-events-none"></div>
+                <div class="flex gap-4">
+                    <label class="text-[10px] font-bold text-zinc-500">FADE DURATION: <input id="fade-val" type="number" value="1" class="bg-transparent border-b border-white/10 w-8 text-white outline-none">s</label>
+                </div>
+            </div>
+
+            <div class="flex-1 relative overflow-hidden bg-black/40 rounded border border-white/5">
+                <input type="range" id="master-scrub" step="0.001" value="0" class="absolute inset-0 z-50 opacity-0 cursor-crosshair">
+                <div id="playhead-line" class="absolute top-0 bottom-0 w-px bg-red-600 z-40 pointer-events-none" style="left:0%"></div>
+
+                <div class="absolute inset-0 p-2 flex flex-col gap-2 pointer-events-none">
+                    <div class="track"><div id="v-clip" class="clip video-clip hidden">VIDEO CONTENT</div></div>
+                    <div class="track"><div id="a-clip" class="clip audio-clip hidden">BACKGROUND MUSIC</div></div>
+                </div>
             </div>
         </footer>
 
-        <input type="file" id="file-in" class="hidden" accept="video/*">
-        <video id="v-engine" class="hidden"></video>
+        <input type="file" id="v-upload" class="hidden" accept="video/*">
+        <input type="file" id="a-upload" class="hidden" accept="audio/*">
+        <video id="video-engine" class="hidden"></video>
+        <audio id="audio-engine" class="hidden"></audio>
     </div>
 
     <script>
-        const state = {
-            v: document.getElementById('v-engine'),
-            ctx: document.getElementById('view').getContext('2d'),
-            cvs: document.getElementById('view'),
+        /**
+         * HOLLYWOOD ENGINE: MULTI-LAYER COMPOSITOR
+         */
+        const studio = {
+            v: document.getElementById('video-engine'),
+            a: document.getElementById('audio-engine'),
+            ctx: document.getElementById('main-canvas').getContext('2d'),
+            canvas: document.getElementById('main-canvas'),
+            fadeLayer: document.getElementById('fade-layer'),
             fx: 'none',
-            playing: false
+            isRendering: false
         };
 
-        const ui = {
-            scrub: document.getElementById('scrub'),
-            head: document.getElementById('head'),
-            time: document.getElementById('timer'),
-            clip: document.getElementById('clip-ui')
+        const timeline = {
+            scrub: document.getElementById('master-scrub'),
+            head: document.getElementById('playhead-line'),
+            vClip: document.getElementById('v-clip'),
+            aClip: document.getElementById('a-clip'),
+            fadeDur: document.getElementById('fade-val')
         };
 
         window.onload = () => {
-            state.cvs.width = 1920; // Internal High-Res
-            state.cvs.height = 1080;
-            document.getElementById('loading').remove();
-            document.getElementById('app').classList.remove('hidden');
-            requestAnimationFrame(draw);
+            studio.canvas.width = 1920;
+            studio.canvas.height = 1080;
+            setTimeout(() => {
+                document.getElementById('loader').classList.add('hidden');
+                document.getElementById('app').classList.remove('hidden');
+            }, 1500);
+            renderEngine();
         };
 
-        document.getElementById('file-in').onchange = (e) => {
+        function triggerFile(id) { document.getElementById(id).click(); }
+
+        // IMPORT LOGIC
+        document.getElementById('v-upload').onchange = (e) => {
             const file = e.target.files[0];
-            if (!file) return;
-            state.v.src = URL.createObjectURL(file);
-            state.v.onloadedmetadata = () => {
-                ui.scrub.max = state.v.duration;
-                ui.clip.classList.remove('hidden');
-                ui.clip.style.width = "100%";
+            studio.v.src = URL.createObjectURL(file);
+            studio.v.onloadedmetadata = () => {
+                timeline.scrub.max = studio.v.duration;
+                timeline.vClip.classList.remove('hidden');
+                timeline.vClip.style.width = "100%";
+                timeline.vClip.innerText = file.name.toUpperCase();
+                document.getElementById('time-total').innerText = formatTime(studio.v.duration);
             };
         };
 
-        ui.scrub.oninput = () => {
-            state.playing = false;
-            state.v.pause();
-            state.v.currentTime = ui.scrub.value;
-            syncUI();
+        document.getElementById('a-upload').onchange = (e) => {
+            const file = e.target.files[0];
+            studio.a.src = URL.createObjectURL(file);
+            timeline.aClip.classList.remove('hidden');
+            timeline.aClip.style.width = "100%";
         };
 
-        function draw() {
-            if (state.v.readyState >= 2) {
-                state.ctx.filter = state.fx;
-                state.ctx.drawImage(state.v, 0, 0, 1920, 1080);
+        // RENDERING LOOP
+        function renderEngine() {
+            if (studio.v.readyState >= 2) {
+                // 1. Draw Video Frame
+                studio.ctx.filter = studio.fx;
+                studio.ctx.drawImage(studio.v, 0, 0, 1920, 1080);
                 
-                // Real-time UI Sync while playing
-                if (!state.v.paused) {
-                    ui.scrub.value = state.v.currentTime;
-                    syncUI();
+                // 2. Process Hollywood Fade In/Out
+                processFades();
+
+                // 3. Sync Timeline UI
+                if (!studio.v.paused) {
+                    timeline.scrub.value = studio.v.currentTime;
+                    syncAudio();
                 }
+                updateUI();
             }
-            requestAnimationFrame(draw);
+            requestAnimationFrame(renderEngine);
         }
 
-        function syncUI() {
-            const p = (state.v.currentTime / state.v.duration) * 100;
-            ui.head.style.left = p + "%";
-            const s = Math.floor(state.v.currentTime);
-            ui.time.innerText = `00:00:${s < 10 ? '0'+s : s}`;
+        function processFades() {
+            const now = studio.v.currentTime;
+            const dur = studio.v.duration;
+            const f = parseFloat(timeline.fadeDur.value);
+            let opacity = 0;
+
+            if (now < f) { // Fade In
+                opacity = 1 - (now / f);
+            } else if (now > dur - f) { // Fade Out
+                opacity = (now - (dur - f)) / f;
+            }
+            studio.fadeLayer.style.opacity = opacity;
         }
 
-        function togglePlay() {
-            if (state.v.paused) state.v.play(); 
-            else state.v.pause();
-            document.getElementById('play-btn').style.display = state.v.paused ? 'block' : 'none';
+        function syncAudio() {
+            if (Math.abs(studio.a.currentTime - studio.v.currentTime) > 0.1) {
+                studio.a.currentTime = studio.v.currentTime;
+            }
+            if (studio.v.paused) studio.a.pause(); else studio.a.play();
         }
 
-        function setFx(f) { state.fx = f; }
+        function updateUI() {
+            const p = (studio.v.currentTime / studio.v.duration) * 100;
+            timeline.head.style.left = p + "%";
+            document.getElementById('time-now').innerText = formatTime(studio.v.currentTime);
+        }
 
-        function exportScene() {
-            const stream = state.cvs.captureStream(30);
-            const rec = new MediaRecorder(stream, { mimeType: 'video/webm' });
-            const chunks = [];
+        function toggleMasterPlay() {
+            if (studio.v.paused) {
+                studio.v.play();
+                studio.a.play();
+                document.getElementById('play-icon').innerHTML = '<path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/>';
+            } else {
+                studio.v.pause();
+                studio.a.pause();
+                document.getElementById('play-icon').innerHTML = '<path d="M8 5v14l11-7z"/>';
+            }
+        }
+
+        timeline.scrub.oninput = () => {
+            studio.v.currentTime = timeline.scrub.value;
+            studio.a.currentTime = timeline.scrub.value;
+            updateUI();
+        };
+
+        function setEffect(eff) { studio.fx = eff; }
+        function jump(amt) { studio.v.currentTime += amt; studio.a.currentTime = studio.v.currentTime; }
+        
+        function formatTime(s) {
+            const m = Math.floor(s / 60);
+            const sec = Math.floor(s % 60);
+            return `${m.toString().padStart(2, '0')}:${sec.toString().padStart(2, '0')}:00`;
+        }
+
+        function exportHollywood() {
+            alert("RENDERING STARTED: Do not touch the browser. Capturing frame-by-frame for highest quality.");
+            const stream = studio.canvas.captureStream(60);
+            const recorder = new MediaRecorder(stream, { mimeType: 'video/webm;codecs=vp9', bitsPerSecond: 8000000 });
+            const data = [];
             
-            rec.ondataavailable = e => chunks.push(e.data);
-            rec.onstop = () => {
-                const blob = new Blob(chunks, { type: 'video/webm' });
+            recorder.ondataavailable = (e) => data.push(e.data);
+            recorder.onstop = () => {
+                const blob = new Blob(data, { type: 'video/webm' });
                 const a = document.createElement('a');
                 a.href = URL.createObjectURL(blob);
-                a.download = "streamcut_pro_export.webm";
+                a.download = "Hollywood_Edit.webm";
                 a.click();
             };
 
-            state.v.currentTime = 0;
-            state.v.play();
-            rec.start();
-            state.v.onended = () => rec.stop();
-            alert("Exporting... The video will play through once to capture.");
+            studio.v.currentTime = 0;
+            studio.a.currentTime = 0;
+            studio.v.play(); studio.a.play();
+            recorder.start();
+            studio.v.onended = () => recorder.stop();
         }
     </script>
 </body>
