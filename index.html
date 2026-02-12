@@ -1,0 +1,262 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>StreamCut - Zero-Build Video Editor</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/@ffmpeg/ffmpeg@0.11.6/dist/ffmpeg.min.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap');
+        body { font-family: 'Inter', sans-serif; background-color: #0f172a; color: white; }
+        
+        /* Timeline Scrollbar */
+        .timeline-scroll::-webkit-scrollbar { height: 8px; }
+        .timeline-scroll::-webkit-scrollbar-thumb { background: #334155; border-radius: 10px; }
+        
+        #loading {
+            position: fixed; inset: 0; background: #0f172a;
+            display: flex; flex-direction: column; align-items: center;
+            justify-content: center; z-index: 9999;
+        }
+
+        .video-preview-container {
+            aspect-ratio: 16 / 9;
+            background: black;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        /* Essential for Mobile: prevent bottom bar overlap */
+        .app-height { min-height: 100vh; display: flex; flex-direction: column; }
+    </style>
+</head>
+<body class="overflow-x-hidden">
+
+    <div id="loading">
+        <div class="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500 mb-4"></div>
+        <p class="text-gray-400 font-medium">Booting FFmpeg Engine...</p>
+    </div>
+
+    <div id="app" class="hidden app-height">
+        <header class="p-4 border-b border-slate-800 flex justify-between items-center bg-slate-900/50 backdrop-blur-md">
+            <div class="flex items-center gap-2">
+                <div class="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center font-bold italic">S</div>
+                <h1 class="text-xl font-bold tracking-tight">StreamCut</h1>
+            </div>
+            <div class="flex gap-3">
+                <button onclick="document.getElementById('file-input').click()" class="text-sm bg-slate-800 hover:bg-slate-700 px-4 py-2 rounded-full transition">
+                    + Add Clip
+                </button>
+                <button id="export-btn" class="text-sm bg-blue-600 hover:bg-blue-700 px-4 py-2 rounded-full font-semibold transition disabled:opacity-50">
+                    Export 1080p
+                </button>
+            </div>
+        </header>
+
+        <main class="flex-1 flex flex-col lg:flex-row overflow-hidden">
+            <aside class="w-full lg:w-80 border-r border-slate-800 p-4 bg-slate-900/30 overflow-y-auto hidden lg:block">
+                <h3 class="text-xs font-bold uppercase tracking-widest text-gray-500 mb-4">Media Library</h3>
+                <div id="asset-list" class="space-y-3">
+                    <p class="text-sm text-gray-500 italic">No media added yet.</p>
+                </div>
+            </aside>
+
+            <section class="flex-1 flex flex-col bg-black relative">
+                <div class="video-preview-container flex-1">
+                    <video id="main-preview" class="max-h-full" controls></video>
+                </div>
+                
+                <div class="p-4 flex justify-center gap-6 bg-slate-900/80">
+                    <button id="btn-trim" class="group flex flex-col items-center gap-1 opacity-50 cursor-not-allowed">
+                        <div class="p-3 bg-slate-800 rounded-full group-hover:bg-slate-700"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13"></path></svg></div>
+                        <span class="text-[10px] uppercase font-bold text-gray-400">Trim</span>
+                    </button>
+                    <button onclick="toggleMute()" class="flex flex-col items-center gap-1">
+                        <div class="p-3 bg-slate-800 rounded-full"><svg id="mute-icon" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z"></path></svg></div>
+                        <span class="text-[10px] uppercase font-bold text-gray-400">Audio</span>
+                    </button>
+                </div>
+            </section>
+        </main>
+
+        <footer class="h-64 border-t border-slate-800 bg-slate-900 p-4 shrink-0 flex flex-col">
+            <div class="flex justify-between items-center mb-2">
+                <span class="text-xs font-mono text-blue-400" id="timestamp">00:00:00 / 00:00:00</span>
+                <div class="flex gap-2">
+                    <button id="btn-undo" class="p-1 hover:text-blue-400 opacity-50"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6"></path></svg></button>
+                </div>
+            </div>
+            
+            <div class="flex-1 timeline-scroll overflow-x-auto overflow-y-hidden border border-slate-800 rounded-lg bg-slate-950 relative">
+                <div class="absolute top-0 bottom-0 w-0.5 bg-red-500 z-10 left-0" id="playhead"></div>
+                
+                <div id="timeline-track" class="h-full flex items-center p-4 min-w-full">
+                    <p id="timeline-empty" class="text-slate-700 text-sm font-medium w-full text-center">Drag clips here or click "Add Clip"</p>
+                </div>
+            </div>
+        </footer>
+
+        <input type="file" id="file-input" class="hidden" accept="video/*">
+    </div>
+
+    <div id="export-modal" class="fixed inset-0 bg-black/90 z-[100] hidden flex flex-col items-center justify-center p-6 text-center">
+        <div class="w-64 bg-slate-800 h-2 rounded-full overflow-hidden mb-4">
+            <div id="export-progress" class="bg-blue-500 h-full w-0 transition-all"></div>
+        </div>
+        <h2 class="text-xl font-bold mb-2">Processing Video...</h2>
+        <p class="text-gray-400 text-sm">Please do not close this tab. Your browser is rendering the frames.</p>
+    </div>
+
+    <script>
+        /**
+         * INITIALIZATION & STATE
+         */
+        const { createFFmpeg, fetchFile } = FFmpeg;
+        const ffmpeg = createFFmpeg({ log: true });
+        
+        const state = {
+            isLoaded: false,
+            activeClip: null,
+            clips: [],
+            isMuted: false
+        };
+
+        const el = {
+            loading: document.getElementById('loading'),
+            app: document.getElementById('app'),
+            fileInput: document.getElementById('file-input'),
+            assetList: document.getElementById('asset-list'),
+            video: document.getElementById('main-preview'),
+            timeline: document.getElementById('timeline-track'),
+            emptyHint: document.getElementById('timeline-empty'),
+            exportBtn: document.getElementById('export-btn'),
+            exportModal: document.getElementById('export-modal'),
+            exportBar: document.getElementById('export-progress'),
+            playhead: document.getElementById('playhead'),
+            timer: document.getElementById('timestamp')
+        };
+
+        // Initialize FFmpeg
+        async function init() {
+            try {
+                await ffmpeg.load();
+                state.isLoaded = true;
+                el.loading.classList.add('hidden');
+                el.app.classList.remove('hidden');
+            } catch (err) {
+                console.error("FFmpeg Load Failed:", err);
+                document.querySelector('#loading p').innerText = "Hardware Acceleration Required. Use Chrome/Edge.";
+            }
+        }
+
+        /**
+         * CORE LOGIC: FILE HANDLING
+         */
+        el.fileInput.onchange = async (e) => {
+            const file = e.target.files[0];
+            if (!file) return;
+
+            const url = URL.createObjectURL(file);
+            const clip = {
+                id: Date.now(),
+                name: file.name,
+                file: file,
+                url: url
+            };
+
+            state.clips.push(clip);
+            addClipToUI(clip);
+            setPreview(clip);
+        };
+
+        function addClipToUI(clip) {
+            el.emptyHint.classList.add('hidden');
+            
+            // Add to Asset Sidebar
+            const asset = document.createElement('div');
+            asset.className = "p-2 bg-slate-800 rounded border border-slate-700 text-xs truncate cursor-pointer hover:border-blue-500";
+            asset.innerText = clip.name;
+            asset.onclick = () => setPreview(clip);
+            el.assetList.appendChild(asset);
+
+            // Add to Timeline
+            const block = document.createElement('div');
+            block.className = "h-16 bg-blue-600/30 border-2 border-blue-500 rounded-md px-4 flex items-center shrink-0 text-xs font-bold mr-2 cursor-pointer min-w-[150px]";
+            block.innerText = clip.name;
+            block.onclick = () => setPreview(clip);
+            el.timeline.appendChild(block);
+        }
+
+        function setPreview(clip) {
+            state.activeClip = clip;
+            el.video.src = clip.url;
+            el.video.load();
+            document.getElementById('btn-trim').classList.remove('opacity-50', 'cursor-not-allowed');
+        }
+
+        /**
+         * CORE LOGIC: EXPORT ENGINE
+         */
+        el.exportBtn.onclick = async () => {
+            if (!state.activeClip) return;
+            
+            el.exportModal.classList.remove('hidden');
+            el.exportBar.style.width = '0%';
+
+            const { file, name } = state.activeClip;
+            
+            // 1. Write file to Virtual FS
+            ffmpeg.FS('writeFile', 'input.mp4', await fetchFile(file));
+
+            // 2. Run Command (This is where the magic happens)
+            // Example: Just a pass-through for demo, but can be scaled to filters
+            await ffmpeg.run('-i', 'input.mp4', '-t', '5', '-f', 'mp4', 'output.mp4');
+
+            // 3. Read result
+            const data = ffmpeg.FS('readFile', 'output.mp4');
+
+            // 4. Trigger Download
+            const downloadUrl = URL.createObjectURL(new Blob([data.buffer], { type: 'video/mp4' }));
+            const link = document.createElement('a');
+            link.href = downloadUrl;
+            link.download = `streamcut_export_${Date.now()}.mp4`;
+            link.click();
+
+            el.exportModal.classList.add('hidden');
+        };
+
+        /**
+         * UX HELPERS
+         */
+        function toggleMute() {
+            state.isMuted = !state.isMuted;
+            el.video.muted = state.isMuted;
+            document.getElementById('mute-icon').innerHTML = state.isMuted 
+                ? '<path d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728L5.636 5.636"></path>'
+                : '<path d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z"></path>';
+        }
+
+        // Playhead Tracking
+        el.video.ontimeupdate = () => {
+            const percent = (el.video.currentTime / el.video.duration) * 100;
+            el.playhead.style.left = `${percent}%`;
+            
+            const cur = formatTime(el.video.currentTime);
+            const dur = formatTime(el.video.duration || 0);
+            el.timer.innerText = `${cur} / ${dur}`;
+        };
+
+        function formatTime(seconds) {
+            const h = Math.floor(seconds / 3600);
+            const m = Math.floor((seconds % 3600) / 60);
+            const s = Math.floor(seconds % 60);
+            return [h, m, s].map(v => v < 10 ? "0" + v : v).join(":");
+        }
+
+        // Start App
+        init();
+    </script>
+</body>
+</html>
