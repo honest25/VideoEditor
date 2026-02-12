@@ -2,174 +2,142 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>CineCut Pro | Mobile Editor</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CineStudio | Pro Browser Editor</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <style>
-        :root {
-            --studio-black: #050505;
-            --studio-gray: #121212;
-            --accent-gold: #D4AF37;
-            --safe-zone: 15%;
-        }
-        body {
-            background-color: var(--studio-black);
-            color: white;
-            font-family: 'Inter', sans-serif;
-            overflow: hidden;
-            height: 100vh;
-        }
-        /* Mobile Safety Zones */
-        .preview-container {
-            height: 60%;
-            background: radial-gradient(circle, #1a1a1a 0%, #050505 100%);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            position: relative;
-        }
-        .video-canvas {
-            aspect-ratio: 9/16;
-            height: 90%;
-            background: #000;
-            box-shadow: 0 0 50px rgba(0,0,0,0.5);
-            border: 1px solid #333;
-            position: relative;
-        }
-        /* Cinematic Timeline */
-        .timeline-area {
-            height: 30%;
-            background: var(--studio-gray);
-            border-top: 1px solid #222;
-            padding: 10px 0;
-            overflow-x: auto;
-            white-space: nowrap;
-        }
-        .track {
-            height: 40px;
-            background: #1a1a1a;
-            margin-bottom: 4px;
-            border-radius: 4px;
-            position: relative;
-            width: 2000px; /* Simulated long timeline */
-        }
-        .clip {
-            background: linear-gradient(90deg, #2a2a2a, #3a3a3a);
-            border: 1px solid #444;
-            height: 100%;
-            width: 150px;
-            display: inline-block;
-            border-radius: 4px;
-            position: absolute;
-        }
-        .playhead {
-            position: absolute;
-            left: 50%;
-            top: 0;
-            bottom: 0;
-            width: 2px;
-            background: var(--accent-gold);
-            z-index: 10;
-            box-shadow: 0 0 10px var(--accent-gold);
-        }
-        /* Tool Bar */
-        .tool-bar {
-            height: 10%;
-            background: #000;
-            display: flex;
-            justify-content: space-around;
-            align-items: center;
-            border-top: 1px solid #222;
-        }
+        :root { --accent: #ffae00; --bg: #0a0a0a; --panel: #161616; }
+        body { background: var(--bg); color: #e0e0e0; font-family: 'Inter', sans-serif; height: 100vh; overflow: hidden; }
+        
+        /* Premiere-Style Layout */
+        .app-grid { display: grid; grid-template-columns: 300px 1fr 300px; grid-template-rows: 1fr 280px; height: 100vh; }
+        .panel { background: var(--panel); border: 1px solid #222; overflow: hidden; display: flex; flex-direction: column; }
+        
+        /* Canva-Style Canvas */
+        #preview-wrap { position: relative; background: #000; display: flex; align-items: center; justify-content: center; overflow: hidden; }
+        canvas { max-height: 90%; box-shadow: 0 20px 50px rgba(0,0,0,0.8); background: #000; }
+
+        /* DaVinci-Style Timeline */
+        .timeline-container { grid-column: 1 / span 3; position: relative; background: #0f0f0f; border-top: 2px solid #222; }
+        .time-ruler { height: 30px; background: #1a1a1a; border-bottom: 1px solid #333; position: relative; }
+        .playhead { width: 2px; height: 100%; background: var(--accent); position: absolute; z-index: 50; top: 0; pointer-events: none; }
+        .track { height: 60px; border-bottom: 1px solid #222; display: flex; align-items: center; padding: 0 10px; position: relative; }
+        .clip-block { background: linear-gradient(to right, #3b82f6, #2563eb); border-radius: 4px; height: 45px; position: absolute; cursor: move; border: 1px solid rgba(255,255,255,0.2); display: flex; align-items: center; padding: 0 8px; font-size: 10px; font-weight: bold; color: white; }
     </style>
 </head>
 <body>
 
-    <header class="flex justify-between items-center px-4 py-3 bg-black border-b border-zinc-800">
-        <i class="fa-solid fa-chevron-left text-zinc-400"></i>
-        <span class="text-xs uppercase tracking-[0.2em] text-zinc-500 font-bold">Project 01: The Unseen</span>
-        <button class="bg-amber-500 text-black px-4 py-1 rounded-full text-xs font-black uppercase tracking-tighter">Export</button>
-    </header>
-
-    <section class="preview-container">
-        <div class="video-canvas" id="preview-window">
-            <div class="absolute bottom-10 left-0 right-0 text-center px-6">
-                <p class="text-sm font-medium tracking-wide opacity-80" style="text-shadow: 2px 2px 4px #000;">STORY HOOK: THE AWAKENING</p>
+<div class="app-grid">
+    <aside class="panel">
+        <div class="p-3 border-b border-zinc-800 flex justify-between items-center">
+            <span class="text-xs font-bold uppercase tracking-widest text-zinc-500">Project Assets</span>
+            <label class="cursor-pointer bg-zinc-800 hover:bg-zinc-700 p-1 px-2 rounded text-[10px]">
+                IMPORT <input type="file" id="file-import" hidden multiple accept="video/*,audio/*,image/*">
+            </label>
+        </div>
+        <div id="asset-list" class="p-2 space-y-2 overflow-y-auto">
             </div>
-            <div class="absolute inset-0 flex items-center justify-center opacity-0 hover:opacity-100 transition-opacity">
-                <i class="fa-solid fa-play text-4xl"></i>
+    </aside>
+
+    <main id="preview-wrap">
+        <div class="absolute top-4 right-4 z-10 space-x-2">
+            <button onclick="applyGrade('sepia(1) contrast(1.2)')" class="bg-black/50 p-2 rounded hover:text-amber-500"><i class="fa-solid fa-wand-magic-sparkles"></i></button>
+            <button onclick="addTextOverlay()" class="bg-black/50 p-2 rounded hover:text-amber-500"><i class="fa-solid fa-t"></i></button>
+        </div>
+        <canvas id="main-canvas"></canvas>
+        <div class="absolute bottom-4 flex space-x-6 bg-black/60 px-6 py-2 rounded-full backdrop-blur-md border border-white/10">
+            <button class="hover:text-amber-400"><i class="fa-solid fa-backward-step"></i></button>
+            <button id="play-btn" class="text-xl text-amber-500"><i class="fa-solid fa-play"></i></button>
+            <button class="hover:text-amber-400"><i class="fa-solid fa-forward-step"></i></button>
+        </div>
+    </main>
+
+    <aside class="panel">
+        <div class="p-3 border-b border-zinc-800 text-xs font-bold uppercase text-zinc-500">Inspector</div>
+        <div class="p-4 space-y-6">
+            <div>
+                <label class="text-[10px] text-zinc-400 uppercase">Exposure</label>
+                <input type="range" class="w-full accent-amber-500" min="0" max="200" value="100">
             </div>
-        </div>
-    </section>
-
-    <section class="timeline-area" id="timeline">
-        <div class="playhead"></div>
-        <div class="track">
-            <div class="clip" style="left: 50%; width: 300px;">
-                <span class="text-[8px] p-1 opacity-50 uppercase">Scene_01.mp4</span>
+            <div>
+                <label class="text-[10px] text-zinc-400 uppercase">S-Curve Contrast</label>
+                <input type="range" class="w-full accent-amber-500" min="0" max="200" value="100">
             </div>
-            <div class="clip" style="left: calc(50% + 305px); width: 200px; background: linear-gradient(90deg, #333, #444);">
-                <span class="text-[8px] p-1 opacity-50 uppercase">Scene_02.mov</span>
-            </div>
+            <button class="w-full py-3 bg-amber-600 text-black font-black uppercase text-xs rounded hover:bg-amber-500 transition-all mt-10">Export 4K (No Login)</button>
         </div>
-        <div class="track h-[20px] opacity-60">
-            <div class="clip !bg-blue-900/30 border-blue-500/30" style="left: 50%; width: 600px;"></div>
-        </div>
-    </section>
+    </aside>
 
-    <nav class="tool-bar">
-        <div class="flex flex-col items-center gap-1 opacity-50 hover:opacity-100 transition-all cursor-pointer">
-            <i class="fa-solid fa-scissors text-sm"></i>
-            <span class="text-[10px] uppercase">Split</span>
+    <footer class="timeline-container">
+        <div class="time-ruler">
+            <div class="playhead" id="playhead" style="left: 50px;"></div>
         </div>
-        <div class="flex flex-col items-center gap-1 opacity-100 text-amber-500">
-            <i class="fa-solid fa-wand-magic-sparkles text-sm"></i>
-            <span class="text-[10px] uppercase">Grade</span>
+        <div class="track" id="video-track-1">
+            <div class="clip-block" style="width: 200px; left: 100px;">SCENE_01.MP4</div>
         </div>
-        <div class="flex flex-col items-center gap-1 opacity-50 hover:opacity-100">
-            <i class="fa-solid fa-music text-sm"></i>
-            <span class="text-[10px] uppercase">Audio</span>
+        <div class="track" id="audio-track-1">
+            <div class="clip-block !bg-green-600/30 !border-green-500" style="width: 400px; left: 50px;">BGM_CINEMATIC.WAV</div>
         </div>
-        <div class="flex flex-col items-center gap-1 opacity-50 hover:opacity-100">
-            <i class="fa-solid fa-t text-sm"></i>
-            <span class="text-[10px] uppercase">Text</span>
-        </div>
-        <div class="flex flex-col items-center gap-1 opacity-50 hover:opacity-100">
-            <i class="fa-solid fa-layer-group text-sm"></i>
-            <span class="text-[10px] uppercase">Overlay</span>
-        </div>
-    </nav>
+    </footer>
+</div>
 
-    <script>
-        // Simple UX Interaction for the Timeline
-        const timeline = document.getElementById('timeline');
-        let isDown = false;
-        let startX;
-        let scrollLeft;
+<script>
+    const canvas = document.getElementById('main-canvas');
+    const ctx = canvas.getContext('2d');
+    const fileImport = document.getElementById('file-import');
+    const assetList = document.getElementById('asset-list');
 
-        timeline.addEventListener('mousedown', (e) => {
-            isDown = true;
-            startX = e.pageX - timeline.offsetLeft;
-            scrollLeft = timeline.scrollLeft;
-        });
-        timeline.addEventListener('mouseleave', () => isDown = false);
-        timeline.addEventListener('mouseup', () => isDown = false);
-        timeline.addEventListener('mousemove', (e) => {
-            if(!isDown) return;
-            e.preventDefault();
-            const x = e.pageX - timeline.offsetLeft;
-            const walk = (x - startX) * 2;
-            timeline.scrollLeft = scrollLeft - walk;
-        });
+    // Initialize Canvas Size (9:16 for Mobile/Shorts)
+    function resizeCanvas() {
+        canvas.width = 1080;
+        canvas.height = 1920;
+        canvas.style.height = "90%";
+        canvas.style.aspectRatio = "9/16";
+        drawPlaceholder();
+    }
 
-        // Haptic feedback simulation
-        document.querySelectorAll('.clip').forEach(clip => {
-            clip.addEventListener('click', () => {
-                clip.classList.toggle('border-amber-500');
-                if (window.navigator.vibrate) window.navigator.vibrate(10);
-            });
-        });
-    </script>
+    function drawPlaceholder() {
+        ctx.fillStyle = '#111';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        ctx.fillStyle = '#333';
+        ctx.font = "bold 40px Inter";
+        ctx.textAlign = "center";
+        ctx.fillText("READY FOR PRODUCTION", 540, 960);
+    }
+
+    // Handle Professional Import
+    fileImport.addEventListener('change', (e) => {
+        const files = e.target.files;
+        for(let file of files) {
+            const url = URL.createObjectURL(file);
+            const item = document.createElement('div');
+            item.className = "bg-zinc-900 p-2 rounded border border-zinc-800 text-[10px] flex gap-3 items-center hover:border-amber-500 cursor-pointer transition-all";
+            item.innerHTML = `<div class="w-12 h-8 bg-black rounded flex items-center justify-center"><i class="fa-solid fa-video"></i></div> <span>${file.name}</span>`;
+            assetList.appendChild(item);
+            
+            // On click, load into preview
+            item.onclick = () => loadToPreview(url);
+        }
+    });
+
+    function loadToPreview(url) {
+        const video = document.createElement('video');
+        video.src = url;
+        video.muted = true;
+        video.play();
+        
+        function update() {
+            ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+            requestAnimationFrame(update);
+        }
+        video.onplay = update;
+    }
+
+    function applyGrade(filterStr) {
+        canvas.style.filter = filterStr;
+    }
+
+    window.onload = resizeCanvas;
+</script>
 </body>
 </html>
