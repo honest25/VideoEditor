@@ -3,174 +3,191 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>CineStudio Ultra Mobile</title>
+    <title>CineStudio Ultra | Mobile Pro</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <style>
-        :root { --gold: #fbbf24; --pro-black: #020202; }
-        body { background: var(--pro-black); color: #fff; font-family: 'Inter', sans-serif; height: 100vh; overflow: hidden; touch-action: none; }
+        :root { --accent: #fbbf24; --bg: #050505; }
+        body { background: var(--bg); color: #fff; font-family: sans-serif; height: 100vh; overflow: hidden; margin: 0; }
         
-        /* Mobile Viewport Architecture */
-        .app-container { display: flex; flex-direction: column; height: 100vh; }
+        /* Main App Grid */
+        .app-shell { display: grid; grid-template-rows: 60px 1fr 240px; height: 100vh; }
         
-        /* Canvas Engine */
-        .preview-pane { flex: 1; position: relative; display: flex; align-items: center; justify-content: center; background: #000; }
-        canvas { max-width: 90%; height: auto; aspect-ratio: 9/16; background: #111; box-shadow: 0 0 40px rgba(251, 191, 36, 0.1); }
-        
-        /* Mobile Pro Timeline */
-        .timeline-area { height: 220px; background: #0a0a0a; border-top: 1px solid #222; overflow-x: auto; position: relative; white-space: nowrap; }
-        .track { height: 40px; margin: 8px 0; background: rgba(255,255,255,0.02); position: relative; min-width: 3000px; }
-        .clip { position: absolute; height: 32px; border-radius: 4px; border: 1px solid rgba(255,255,255,0.2); font-size: 10px; padding: 4px; }
-        .v-clip { background: linear-gradient(90deg, #1e40af, #3b82f6); }
-        .a-clip { background: linear-gradient(90deg, #047857, #10b981); }
-        .playhead { position: absolute; left: 0; top: 0; bottom: 0; width: 2px; background: #ff0000; z-index: 50; box-shadow: 0 0 10px red; }
+        /* Preview Engine */
+        .preview-pane { position: relative; background: #000; display: flex; align-items: center; justify-content: center; overflow: hidden; }
+        canvas { max-height: 95%; aspect-ratio: 9/16; background: #111; box-shadow: 0 0 30px rgba(0,0,0,0.5); }
+
+        /* Timeline & Tracks */
+        .timeline-container { background: #0a0a0a; border-top: 1px solid #222; overflow-x: auto; position: relative; padding-top: 10px; }
+        .track { height: 40px; border-bottom: 1px solid #1a1a1a; position: relative; min-width: 3000px; }
+        .clip { position: absolute; height: 32px; border-radius: 4px; padding: 4px 10px; font-size: 10px; font-weight: bold; display: flex; align-items: center; color: white; }
+        .v-clip { background: linear-gradient(90deg, #1e40af, #3b82f6); border: 1px solid #60a5fa; }
+        .a-clip { background: linear-gradient(90deg, #065f46, #10b981); border: 1px solid #34d399; }
+        .playhead { width: 2px; height: 100%; background: #ff0000; position: absolute; left: 0; z-index: 50; pointer-events: none; }
 
         /* Control Dock */
-        .dock { height: 70px; background: #000; border-top: 1px solid #222; display: flex; justify-content: space-around; align-items: center; }
-        .btn-icon { display: flex; flex-direction: column; align-items: center; font-size: 10px; color: #777; transition: 0.2s; }
-        .btn-icon:active { color: var(--gold); transform: scale(0.9); }
+        .controls { background: #000; display: flex; justify-content: space-around; align-items: center; border-top: 1px solid #222; padding: 10px 0; }
+        .tool-btn { display: flex; flex-direction: column; align-items: center; gap: 4px; font-size: 10px; color: #888; }
+        .tool-btn.active { color: var(--accent); }
     </style>
 </head>
 <body>
 
-<div class="app-container">
-    <header class="h-14 border-b border-zinc-800 flex items-center justify-between px-4">
-        <div class="flex items-center gap-2">
-            <span class="text-amber-500 font-black italic">ULTRA</span>
-            <input type="text" id="project-title" value="CINE_PRO_001" class="bg-transparent text-xs font-bold outline-none border-b border-zinc-800 focus:border-amber-500 w-32">
+<div class="app-shell">
+    <header class="flex items-center justify-between px-4 border-b border-zinc-800 bg-black">
+        <input type="text" id="proj-name" value="MY_EDIT_001" class="bg-transparent text-amber-500 font-black outline-none w-32">
+        <div class="flex gap-3">
+            <button onclick="startExport()" class="bg-amber-500 text-black px-4 py-1 rounded-full text-[10px] font-black uppercase">Export</button>
         </div>
-        <button onclick="startExport()" class="bg-amber-500 text-black px-4 py-1 rounded-full text-[10px] font-black uppercase">Render</button>
     </header>
 
-    <section class="preview-pane">
-        <canvas id="studio-canvas"></canvas>
-        <div class="absolute bottom-4 flex gap-8">
-            <button onclick="togglePlay()" class="w-12 h-12 bg-white/10 backdrop-blur rounded-full flex items-center justify-center"><i class="fa-solid fa-play" id="play-icon"></i></button>
-        </div>
-    </section>
+    <main class="preview-pane">
+        <canvas id="c"></canvas>
+        <div id="status" class="absolute top-4 left-4 text-[10px] text-zinc-500 bg-black/50 px-2 py-1 rounded">System Ready</div>
+        <button onclick="togglePlay()" class="absolute bottom-6 w-14 h-14 bg-white/10 backdrop-blur-md rounded-full border border-white/20 flex items-center justify-center">
+            <i class="fa-solid fa-play text-xl" id="p-icon"></i>
+        </button>
+    </main>
 
-    <section class="timeline-area" id="timeline">
-        <div class="playhead" id="playhead"></div>
-        <div class="track" id="v-track"></div>
-        <div class="track" id="a-track"></div>
-        <div class="px-4 py-2 flex items-center gap-4 bg-zinc-900/50">
-            <span class="text-[9px] uppercase font-bold text-zinc-500">Speed Ramp</span>
-            <input type="range" id="speed-ramp" min="0.5" max="2.5" step="0.1" value="1" class="w-full accent-amber-500">
+    <section class="flex flex-col">
+        <div class="timeline-container" id="tl-scroll">
+            <div class="playhead" id="playhead"></div>
+            <div class="track" id="vt"></div>
+            <div class="track" id="at"></div>
         </div>
-    </section>
+        
+        <div class="p-2 px-4 bg-zinc-900/50 flex items-center gap-4">
+            <span class="text-[9px] font-bold text-zinc-500">SPEED RAMP</span>
+            <input type="range" id="speed-slider" min="0.5" max="2.5" step="0.1" value="1" class="w-full accent-amber-500">
+        </div>
 
-    <nav class="dock">
-        <label class="btn-icon">
-            <i class="fa-solid fa-file-import text-lg"></i>
-            <span>Import</span>
-            <input type="file" id="media-in" hidden multiple accept="video/*,audio/*,image/*">
-        </label>
-        <div class="btn-icon" onclick="applyEffect('grain')">
-            <i class="fa-solid fa-film text-lg"></i>
-            <span>Film Grain</span>
-        </div>
-        <div class="btn-icon" onclick="trimClip()">
-            <i class="fa-solid fa-scissors text-lg"></i>
-            <span>Trim At Playhead</span>
-        </div>
-        <div class="btn-icon" onclick="setRatio(9/16)">
-            <i class="fa-solid fa-mobile-screen text-lg"></i>
-            <span>9:16 Lock</span>
-        </div>
-    </nav>
+        <nav class="controls">
+            <label class="tool-btn">
+                <i class="fa-solid fa-folder-plus text-lg"></i><span>Media</span>
+                <input type="file" id="media-load" hidden multiple accept="video/*,audio/*,image/*">
+            </label>
+            <button onclick="toggleChroma()" id="chroma-btn" class="tool-btn">
+                <i class="fa-solid fa-wand-magic-sparkles text-lg"></i><span>Keyer</span>
+            </button>
+            <button onclick="applyGrain()" id="grain-btn" class="tool-btn">
+                <i class="fa-solid fa-clapperboard text-lg"></i><span>Grain</span>
+            </button>
+            <select id="ratio-sel" onchange="changeRatio(this.value)" class="bg-transparent text-[10px] text-zinc-400 outline-none">
+                <option value="9/16">9:16</option>
+                <option value="16/9">16:9</option>
+                <option value="1/1">1:1</option>
+            </select>
+        </nav>
+    </section>
 </div>
 
 <script>
-    const canvas = document.getElementById('studio-canvas');
-    const ctx = canvas.getContext('2d');
-    let video = null, audio = null, isPlaying = false, hasGrain = false;
+    const canvas = document.getElementById('c');
+    const ctx = canvas.getContext('2d', { alpha: false });
+    const log = (m) => document.getElementById('status').innerText = m;
+    
+    let video = null, audio = null, isPlaying = false;
+    let chromaOn = false, grainOn = false;
 
+    // Initialize
     canvas.width = 1080; canvas.height = 1920;
 
-    // --- Media Engine ---
-    document.getElementById('media-in').onchange = (e) => {
+    // --- Media Input ---
+    document.getElementById('media-load').onchange = (e) => {
         const file = e.target.files[0];
+        if(!file) return;
         const url = URL.createObjectURL(file);
         const type = file.type.split('/')[0];
 
         if(type === 'video') {
             video = document.createElement('video');
-            video.src = url; video.loop = true; video.muted = true;
-            addClip(file.name, 'v-clip', 'v-track');
+            video.src = url; video.muted = true; video.playsInline = true; video.loop = true;
+            video.onloadeddata = () => { log("Video Ready"); draw(); };
+            createClip(file.name, 'v-clip', 'vt');
         } else if(type === 'audio') {
             audio = new Audio(url);
-            addClip(file.name, 'a-clip', 'a-track');
+            createClip(file.name, 'a-clip', 'at');
+            log("Audio Ready");
         }
     };
 
-    function addClip(name, cls, track) {
-        const clip = document.createElement('div');
-        clip.className = `clip ${cls}`;
-        clip.style.width = "200px"; clip.style.left = "50px";
-        clip.innerText = name.substring(0,10);
-        document.getElementById(track).appendChild(clip);
+    function createClip(n, c, t) {
+        const div = document.createElement('div');
+        div.className = `clip ${c}`;
+        div.style.left = "20px"; div.style.width = "250px";
+        div.innerText = n.substring(0,12);
+        document.getElementById(t).appendChild(div);
     }
 
-    // --- Professional FX & Ramping ---
-    function applyEffect(type) {
-        if(type === 'grain') hasGrain = !hasGrain;
-    }
-
-    document.getElementById('speed-ramp').oninput = (e) => {
+    // --- FX Engine ---
+    function toggleChroma() { chromaOn = !chromaOn; document.getElementById('chroma-btn').classList.toggle('active'); }
+    function applyGrain() { grainOn = !grainOn; document.getElementById('grain-btn').classList.toggle('active'); }
+    
+    document.getElementById('speed-slider').oninput = (e) => {
         if(video) video.playbackRate = e.target.value;
         if(audio) audio.playbackRate = e.target.value;
     };
 
-    // --- Render Engine ---
+    function changeRatio(r) {
+        const val = eval(r);
+        canvas.style.aspectRatio = r;
+        if(val < 1) { canvas.width = 1080; canvas.height = 1920; }
+        else { canvas.width = 1920; canvas.height = 1080; }
+    }
+
+    // --- Rendering Core ---
     function draw() {
-        ctx.clearRect(0,0,canvas.width,canvas.height);
         if(video) {
             ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
             
-            // Motion Blur Simulation (Alpha ghosting)
-            if(video.playbackRate > 1.5) {
-                ctx.globalAlpha = 0.3;
-                ctx.drawImage(video, -10, 0, canvas.width, canvas.height);
-                ctx.globalAlpha = 1.0;
+            if(chromaOn) {
+                let f = ctx.getImageData(0,0,canvas.width,canvas.height);
+                for(let i=0; i<f.data.length; i+=4) {
+                    // Optimized Green Screen Logic (Delta Keying)
+                    if(f.data[i+1] > 100 && f.data[i+1] > f.data[i] * 1.2) f.data[i+3] = 0;
+                }
+                ctx.putImageData(f,0,0);
             }
 
-            // Film Grain Overlay
-            if(hasGrain) {
-                for (let i = 0; i < 5000; i++) {
-                    ctx.fillStyle = `rgba(255,255,255,${Math.random() * 0.05})`;
-                    ctx.fillRect(Math.random()*canvas.width, Math.random()*canvas.height, 2, 2);
-                }
+            if(grainOn) {
+                ctx.fillStyle = `rgba(255,255,255,${Math.random() * 0.04})`;
+                for(let i=0; i<1000; i++) ctx.fillRect(Math.random()*canvas.width, Math.random()*canvas.height, 2, 2);
             }
-            
-            // Sync Playhead
-            const pos = (video.currentTime / video.duration) * 1000;
-            document.getElementById('playhead').style.left = pos + 'px';
+
+            if(isPlaying) {
+                document.getElementById('playhead').style.left = (video.currentTime / video.duration * 1000) + "px";
+            }
         }
         requestAnimationFrame(draw);
     }
 
+    // --- Controls ---
     function togglePlay() {
+        if(!video) return;
         isPlaying = !isPlaying;
-        if(isPlaying) { video?.play(); audio?.play(); } 
-        else { video?.pause(); audio?.pause(); }
-        document.getElementById('play-icon').className = isPlaying ? "fa-solid fa-pause" : "fa-solid fa-play";
+        if(isPlaying) { video.play(); audio?.play(); } 
+        else { video.pause(); audio?.pause(); }
+        document.getElementById('p-icon').className = isPlaying ? "fa-solid fa-pause" : "fa-solid fa-play";
     }
 
     async function startExport() {
-        const stream = canvas.captureStream(60);
-        const rec = new MediaRecorder(stream, { mimeType: 'video/webm', bitsPerSecond: 10000000 });
+        if(!video) return;
+        log("Rendering Master...");
+        const stream = canvas.captureStream(30);
+        const rec = new MediaRecorder(stream, { mimeType: 'video/webm', bitsPerSecond: 5000000 });
         let chunks = [];
         rec.ondataavailable = e => chunks.push(e.data);
         rec.onstop = () => {
             const b = new Blob(chunks, {type:'video/webm'});
-            const a = document.createElement('a'); a.href = URL.createObjectURL(b); a.download = 'Master_Export.webm'; a.click();
+            const a = document.createElement('a');
+            a.href = URL.createObjectURL(b);
+            a.download = document.getElementById('proj-name').value + '.webm';
+            a.click();
+            log("Download Started");
         };
         rec.start();
-        alert("RENDERING PRO EXPORT: 10 Seconds starting now.");
-        setTimeout(() => rec.stop(), 10000);
+        setTimeout(() => rec.stop(), 5000); // 5s Render
     }
-
-    draw();
 </script>
 </body>
 </html>
