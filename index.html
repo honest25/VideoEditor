@@ -2,223 +2,216 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>CineStudio Elite | Production Ready</title>
+    <title>Gemini Ultra - Real Processing Engine</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <script src="https://unpkg.com/@ffmpeg/ffmpeg@0.11.6/dist/ffmpeg.min.js"></script>
     <style>
-        :root { --gold: #fbbf24; --bg: #050505; }
-        body { background: var(--bg); color: #fff; font-family: 'Inter', sans-serif; height: 100vh; overflow: hidden; margin: 0; }
-        .app-shell { display: grid; grid-template-rows: 60px 1fr 240px; height: 100vh; }
-        
-        /* High-Performance Canvas */
-        .preview-pane { position: relative; background: #000; display: flex; align-items: center; justify-content: center; overflow: hidden; }
-        canvas { max-height: 95%; max-width: 95%; background: #111; border: 1px solid #333; aspect-ratio: 9/16; }
-
-        /* Timeline Logic */
-        .timeline-box { background: #0a0a0a; border-top: 1px solid #222; overflow-x: auto; position: relative; padding: 10px 0; }
-        .track { height: 42px; border-bottom: 1px solid #1a1a1a; position: relative; min-width: 5000px; display: flex; align-items: center; }
-        .clip { position: absolute; height: 34px; border-radius: 4px; padding: 0 12px; font-size: 10px; font-weight: bold; display: flex; align-items: center; color: white; border: 1px solid rgba(255,255,255,0.2); }
-        .v-clip { background: linear-gradient(90deg, #1e40af, #3b82f6); }
-        .a-clip { background: linear-gradient(90deg, #065f46, #10b981); }
-        .playhead { width: 2px; height: 100%; background: #ff0000; position: absolute; left: 0; z-index: 50; pointer-events: none; box-shadow: 0 0 10px red; }
-
-        /* Navigation Dock */
-        .dock { background: #000; display: flex; justify-content: space-around; align-items: center; border-top: 1px solid #222; padding: 10px 0; }
-        .tool-btn { display: flex; flex-direction: column; align-items: center; gap: 4px; font-size: 10px; color: #888; background: none; border: none; cursor: pointer; }
-        .active { color: var(--gold); }
-        
-        /* Safe Zones */
-        #safe-zone { position: absolute; border: 1px dashed rgba(251, 191, 36, 0.4); pointer-events: none; display: none; }
+        .clip-active { border: 3px solid #3b82f6 !important; background: #1e293b !important; scale: 1.05; }
+        .timeline-scroll::-webkit-scrollbar { height: 8px; }
+        .timeline-scroll::-webkit-scrollbar-thumb { background: #334155; border-radius: 4px; }
     </style>
 </head>
-<body>
+<body class="bg-[#020617] text-white h-screen flex flex-col overflow-hidden">
 
-<div class="app-shell">
-    <header class="flex items-center justify-between px-4 border-b border-zinc-800 bg-black">
+    <nav class="h-16 bg-slate-900 border-b border-slate-800 flex justify-between items-center px-6">
         <div class="flex items-center gap-2">
-            <i class="fa-solid fa-bolt text-amber-500"></i>
-            <input type="text" id="p-name" value="CINEMATIC_REEL_01" class="bg-transparent text-zinc-300 font-black outline-none w-40 text-sm">
+            <span class="bg-blue-600 p-1 rounded font-bold">G</span>
+            <span class="font-black italic text-xl">ULTRA <span class="text-blue-500 text-sm">PRO</span></span>
         </div>
-        <button onclick="exportVideo()" class="bg-amber-500 text-black px-5 py-1.5 rounded-full text-[10px] font-black uppercase">Render</button>
-    </header>
-
-    <main class="preview-pane">
-        <canvas id="mainCanvas"></canvas>
-        <div id="safe-zone"></div>
-        <div id="loader" class="absolute text-[10px] text-amber-500 font-bold uppercase tracking-widest">Waiting for Media...</div>
-        
-        <button onclick="togglePlayback()" id="playBtn" class="absolute bottom-6 w-14 h-14 bg-white/10 backdrop-blur-xl rounded-full border border-white/20 flex items-center justify-center transition-transform active:scale-90">
-            <i class="fa-solid fa-play text-xl" id="playIcon"></i>
-        </button>
-    </main>
-
-    <section class="flex flex-col">
-        <div class="timeline-box" id="timeline">
-            <div class="playhead" id="playhead"></div>
-            <div class="track" id="v-track"></div>
-            <div class="track" id="a-track"></div>
+        <div class="flex gap-2">
+            <button onclick="document.getElementById('vidInp').click()" class="bg-blue-600 hover:bg-blue-500 px-4 py-2 rounded text-xs font-bold">+ IMPORT VIDEO</button>
+            <button onclick="startProcessing()" id="renderBtn" class="bg-green-600 hover:bg-green-500 px-6 py-2 rounded text-xs font-black shadow-lg shadow-green-900/20">RENDER & DOWNLOAD</button>
         </div>
-        
-        <div class="p-2 px-4 bg-zinc-900 flex items-center gap-6">
-            <span class="text-[9px] font-bold text-zinc-500">SPEED RAMP</span>
-            <input type="range" id="speedRamp" min="0.5" max="2.0" step="0.1" value="1" class="w-full accent-amber-500">
-        </div>
+        <input type="file" id="vidInp" multiple hidden accept="video/*" onchange="handleFiles(this.files)">
+    </nav>
 
-        <nav class="dock">
-            <label class="tool-btn">
-                <i class="fa-solid fa-plus-square text-lg"></i><span>Add Media</span>
-                <input type="file" id="fileInput" hidden multiple accept="video/*,audio/*,image/*">
-            </label>
-            <button onclick="applyFX('chroma')" id="chromaBtn" class="tool-btn">
-                <i class="fa-solid fa-wand-magic-sparkles text-lg"></i><span>Keyer</span>
-            </button>
-            <button onclick="applyFX('grain')" id="grainBtn" class="tool-btn">
-                <i class="fa-solid fa-film text-lg"></i><span>Grain</span>
-            </button>
-            <button onclick="toggleSafeZones()" id="szBtn" class="tool-btn">
-                <i class="fa-solid fa-border-all text-lg"></i><span>Safe Zone</span>
-            </button>
-        </nav>
-    </section>
-</div>
-
-<script>
-    const canvas = document.getElementById('mainCanvas');
-    const ctx = canvas.getContext('2d', { alpha: false });
-    let video = null, audio = null, isPlaying = false;
-    let useChroma = false, useGrain = false;
-
-    // Initialization
-    canvas.width = 1080; canvas.height = 1920;
-
-    // --- File Handling ---
-    document.getElementById('fileInput').onchange = (e) => {
-        const file = e.target.files[0];
-        if(!file) return;
-        
-        const url = URL.createObjectURL(file);
-        const type = file.type.split('/')[0];
-
-        if(type === 'video') {
-            video = document.createElement('video');
-            video.src = url; 
-            video.muted = true; // Essential for browser auto-play
-            video.playsInline = true;
-            video.loop = true;
-            video.onloadeddata = () => {
-                document.getElementById('loader').style.display = 'none';
-                updateSafeZoneUI();
-                renderLoop();
-            };
-            createClipUI(file.name, 'v-clip', 'v-track');
-        } else if(type === 'audio') {
-            audio = new Audio(url);
-            createClipUI(file.name, 'a-clip', 'a-track');
-        }
-    };
-
-    function createClipUI(name, css, trackId) {
-        const clip = document.createElement('div');
-        clip.className = `clip ${css}`;
-        clip.style.left = "20px"; clip.style.width = "200px";
-        clip.innerText = name.substring(0, 10) + "...";
-        document.getElementById(trackId).appendChild(clip);
-    }
-
-    // --- Core FX Logic ---
-    function applyFX(type) {
-        if(type === 'chroma') {
-            useChroma = !useChroma;
-            document.getElementById('chromaBtn').classList.toggle('active');
-        }
-        if(type === 'grain') {
-            useGrain = !useGrain;
-            document.getElementById('grainBtn').classList.toggle('active');
-        }
-    }
-
-    function toggleSafeZones() {
-        const sz = document.getElementById('safe-zone');
-        sz.style.display = (sz.style.display === 'block') ? 'none' : 'block';
-        document.getElementById('szBtn').classList.toggle('active');
-    }
-
-    // --- High Performance Render Loop ---
-    function renderLoop() {
-        if(video) {
-            ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+    <div class="flex flex-1 overflow-hidden">
+        <aside class="w-72 bg-slate-900 border-r border-slate-800 p-4 space-y-6">
+            <h2 class="text-[10px] font-bold text-slate-500 tracking-widest uppercase">Clip Settings</h2>
             
-            if(useChroma) {
-                let imgData = ctx.getImageData(0,0,canvas.width,canvas.height);
-                for(let i=0; i<imgData.data.length; i+=4) {
-                    // Optimized Green Screen check
-                    let r = imgData.data[i], g = imgData.data[i+1], b = imgData.data[i+2];
-                    if(g > 100 && g > r * 1.2 && g > b * 1.2) imgData.data[i+3] = 0;
-                }
-                ctx.putImageData(imgData, 0, 0);
-            }
+            <div id="inspector" class="hidden space-y-4">
+                <div>
+                    <label class="text-[10px] text-slate-400">TEXT OVERLAY</label>
+                    <input type="text" id="t_text" class="w-full bg-black border border-slate-700 p-2 rounded text-sm mt-1" oninput="saveData()">
+                </div>
+                <div>
+                    <label class="text-[10px] text-slate-400">FILTER</label>
+                    <select id="t_filter" class="w-full bg-black border border-slate-700 p-2 rounded text-sm mt-1" onchange="saveData()">
+                        <option value="none">Normal</option>
+                        <option value="bw">Black & White</option>
+                        <option value="sepia">Sepia Vintage</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="text-[10px] text-slate-400">SPEED (0.5x - 2.0x)</label>
+                    <input type="range" id="t_speed" min="0.5" max="2" step="0.1" value="1" class="w-full" oninput="saveData()">
+                    <div id="speedVal" class="text-[10px] text-center text-blue-400">1.0x</div>
+                </div>
+            </div>
+            <div id="placeholder" class="text-slate-600 text-xs italic">Select a clip to edit...</div>
+        </aside>
 
-            if(useGrain) {
-                ctx.fillStyle = `rgba(255,255,255,${Math.random() * 0.05})`;
-                for(let i=0; i<800; i++) {
-                    ctx.fillRect(Math.random()*canvas.width, Math.random()*canvas.height, 2, 2);
-                }
-            }
+        <main class="flex-1 flex flex-col relative">
+            <div class="flex-1 flex items-center justify-center p-6 bg-black">
+                <video id="mainPlayer" class="max-h-full rounded border border-slate-800 shadow-2xl" controls></video>
+                
+                <div id="renderOverlay" class="hidden absolute inset-0 bg-slate-950/90 z-50 flex flex-col items-center justify-center">
+                    <div class="w-64 h-1.5 bg-slate-800 rounded-full overflow-hidden">
+                        <div id="pBar" class="w-0 h-full bg-blue-500 transition-all duration-300"></div>
+                    </div>
+                    <p id="pStatus" class="mt-4 font-mono text-xs text-blue-400 animate-pulse">Initializing Engine...</p>
+                </div>
+            </div>
 
-            if(isPlaying) {
-                const progress = (video.currentTime / video.duration) * 1000;
-                document.getElementById('playhead').style.left = progress + 'px';
+            <div class="h-48 bg-slate-900 border-t border-slate-800 p-4">
+                <p class="text-[10px] text-slate-500 font-bold mb-3 uppercase tracking-tighter">Timeline Track</p>
+                <div id="timeline" class="flex gap-4 overflow-x-auto timeline-scroll h-24 items-center px-2">
+                    </div>
+            </div>
+        </main>
+    </div>
+
+    <script>
+        const { createFFmpeg, fetchFile } = FFmpeg;
+        // SINGLE THREADED MODE FOR BROWSER COMPATIBILITY
+        const ffmpeg = createFFmpeg({ log: true });
+        let clips = [];
+        let activeIdx = -1;
+
+        async function initFFmpeg() {
+            try {
+                if (!ffmpeg.isLoaded()) await ffmpeg.load();
+                console.log("FFmpeg Loaded Successfully");
+            } catch (e) {
+                alert("FFmpeg Load Error: Use Chrome or Local Server (Live Server)");
             }
         }
-        requestAnimationFrame(renderLoop);
-    }
+        initFFmpeg();
 
-    // --- Controls ---
-    function togglePlayback() {
-        if(!video) return;
-        isPlaying = !isPlaying;
-        if(isPlaying) { video.play(); audio?.play(); }
-        else { video.pause(); audio?.pause(); }
-        document.getElementById('playIcon').className = isPlaying ? "fa-solid fa-pause" : "fa-solid fa-play";
-    }
+        function handleFiles(files) {
+            for (let f of files) {
+                clips.push({
+                    file: f,
+                    url: URL.createObjectURL(f),
+                    name: f.name,
+                    text: '',
+                    filter: 'none',
+                    speed: 1.0
+                });
+            }
+            renderTimeline();
+        }
 
-    document.getElementById('speedRamp').oninput = (e) => {
-        if(video) video.playbackRate = e.target.value;
-        if(audio) audio.playbackRate = e.target.value;
-    };
+        function renderTimeline() {
+            const tl = document.getElementById('timeline');
+            tl.innerHTML = '';
+            clips.forEach((c, i) => {
+                const div = document.createElement('div');
+                div.className = `min-w-[150px] h-16 rounded bg-slate-800 p-2 cursor-pointer border ${activeIdx === i ? 'clip-active' : 'border-slate-700'}`;
+                div.innerHTML = `<div class="text-[9px] truncate">${c.name}</div><div class="text-[8px] text-blue-400 mt-2">${c.filter} | ${c.speed}x</div>`;
+                div.onclick = () => selectClip(i);
+                tl.appendChild(div);
+            });
+        }
 
-    function updateSafeZoneUI() {
-        const sz = document.getElementById('safe-zone');
-        const rect = canvas.getBoundingClientRect();
-        sz.style.width = (rect.width * 0.8) + 'px';
-        sz.style.height = (rect.height * 0.8) + 'px';
-        sz.style.top = (rect.top + (rect.height * 0.1)) + 'px';
-        sz.style.left = (rect.left + (rect.width * 0.1)) + 'px';
-    }
+        function selectClip(i) {
+            activeIdx = i;
+            const c = clips[i];
+            document.getElementById('mainPlayer').src = c.url;
+            document.getElementById('placeholder').classList.add('hidden');
+            document.getElementById('inspector').classList.remove('hidden');
+            
+            document.getElementById('t_text').value = c.text;
+            document.getElementById('t_filter').value = c.filter;
+            document.getElementById('t_speed').value = c.speed;
+            document.getElementById('speedVal').innerText = c.speed + 'x';
+            renderTimeline();
+        }
 
-    // --- Professional Export ---
-    async function exportVideo() {
-        if(!video) return alert("Please add media first!");
-        const stream = canvas.captureStream(30);
-        const recorder = new MediaRecorder(stream, { mimeType: 'video/webm', bitsPerSecond: 8000000 });
-        const chunks = [];
-        
-        recorder.ondataavailable = e => chunks.push(e.data);
-        recorder.onstop = () => {
-            const blob = new Blob(chunks, { type: 'video/webm' });
-            const a = document.createElement('a');
-            a.href = URL.createObjectURL(blob);
-            a.download = document.getElementById('p-name').value + '.webm';
-            a.click();
-        };
-        
-        recorder.start();
-        alert("Recording 10 seconds of output...");
-        setTimeout(() => recorder.stop(), 10000);
-    }
+        function saveData() {
+            if (activeIdx === -1) return;
+            clips[activeIdx].text = document.getElementById('t_text').value;
+            clips[activeIdx].filter = document.getElementById('t_filter').value;
+            clips[activeIdx].speed = document.getElementById('t_speed').value;
+            document.getElementById('speedVal').innerText = clips[activeIdx].speed + 'x';
+            renderTimeline();
+        }
 
-    window.onresize = updateSafeZoneUI;
-</script>
+        // REAL PERFORMANCE: FFmpeg Command Execution
+        async function startProcessing() {
+            if (clips.length === 0) return alert("Please import a video first!");
+            
+            const overlay = document.getElementById('renderOverlay');
+            const status = document.getElementById('pStatus');
+            const bar = document.getElementById('pBar');
+            
+            overlay.classList.remove('hidden');
+            status.innerText = "Loading assets into memory...";
+
+            try {
+                // 1. Write files to FFmpeg Virtual System
+                for (let i = 0; i < clips.length; i++) {
+                    ffmpeg.FS('writeFile', `input${i}.mp4`, await fetchFile(clips[i].file));
+                }
+
+                // 2. Build Complex Filter for REAL Processing
+                // This chain handles Scaling, Filters, Speed, and Text in one go
+                let filterStr = "";
+                for (let i = 0; i < clips.length; i++) {
+                    let vTag = `[${i}:v]`;
+                    let fx = `scale=1280:720,setsar=1`;
+                    
+                    if (clips[i].filter === 'bw') fx += `,hue=s=0`;
+                    if (clips[i].filter === 'sepia') fx += `,colorchannelmixer=.393:.769:.189:0:.349:.686:.168:0:.272:.534:.131`;
+                    
+                    fx += `,setpts=${1/clips[i].speed}*PTS`;
+                    
+                    if (clips[i].text) {
+                        // drawtext works if fonts are loaded, using simple box for fallback
+                        fx += `,drawtext=text='${clips[i].text}':x=(w-text_w)/2:y=h-80:fontsize=40:fontcolor=white:box=1:boxcolor=black@0.5`;
+                    }
+                    
+                    filterStr += `${vTag}${fx}[v${i}out]; [${i}:a]atempo=${clips[i].speed}[a${i}out]; `;
+                }
+
+                // Concatenate everything
+                let concat = "";
+                for (let i = 0; i < clips.length; i++) concat += `[v${i}out][a${i}out]`;
+                filterStr += `${concat}concat=n=${clips.length}:v=1:a=1[vfinal][afinal]`;
+
+                status.innerText = "FFmpeg: Rendering Frames (Pixel Processing)...";
+                bar.style.width = "50%";
+
+                // 3. EXECUTE REAL COMMAND
+                await ffmpeg.run(
+                    ...clips.flatMap((_, i) => ['-i', `input${i}.mp4`]),
+                    '-filter_complex', filterStr,
+                    '-map', '[vfinal]', '-map', '[afinal]',
+                    '-c:v', 'libx264',
+                    '-preset', 'ultrafast',
+                    'output.mp4'
+                );
+
+                // 4. DOWNLOAD RESULT
+                status.innerText = "Finalizing File...";
+                bar.style.width = "100%";
+                
+                const data = ffmpeg.FS('readFile', 'output.mp4');
+                const url = URL.createObjectURL(new Blob([data.buffer], { type: 'video/mp4' }));
+                
+                const link = document.createElement('a');
+                link.href = url;
+                link.download = "Gemini_Ultra_Edit.mp4";
+                link.click();
+
+            } catch (err) {
+                console.error(err);
+                alert("FFmpeg Error: " + err.message);
+            } finally {
+                overlay.classList.add('hidden');
+                bar.style.width = "0%";
+            }
+        }
+    </script>
 </body>
 </html>
