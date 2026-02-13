@@ -2,215 +2,203 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Gemini Ultra - Real Processing Engine</title>
+    <title>Gemini Ultra V18 - 4K Export Studio</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/@ffmpeg/ffmpeg@0.11.6/dist/ffmpeg.min.js"></script>
     <style>
-        .clip-active { border: 3px solid #3b82f6 !important; background: #1e293b !important; scale: 1.05; }
-        .timeline-scroll::-webkit-scrollbar { height: 8px; }
-        .timeline-scroll::-webkit-scrollbar-thumb { background: #334155; border-radius: 4px; }
+        body { background: #020617; color: #f8fafc; font-family: 'Inter', sans-serif; overflow: hidden; }
+        .clip-active { border: 2px solid #3b82f6; background: #1e293b; }
+        .insta-cyberpunk { filter: hue-rotate(160deg) saturate(1.8) contrast(1.2); }
+        .insta-vintage { filter: sepia(0.6) contrast(0.9) brightness(1.1); }
+        .insta-golden { filter: sepia(0.3) saturate(2.2) hue-rotate(-15deg); }
+        .insta-horror { filter: grayscale(0.5) sepia(1) hue-rotate(70deg); }
+        input[type="range"] { accent-color: #3b82f6; }
+        select { outline: none; transition: 0.3s; }
+        select:focus { border-color: #3b82f6; box-shadow: 0 0 10px rgba(59, 130, 246, 0.4); }
     </style>
 </head>
-<body class="bg-[#020617] text-white h-screen flex flex-col overflow-hidden">
+<body class="h-screen flex flex-col">
 
-    <nav class="h-16 bg-slate-900 border-b border-slate-800 flex justify-between items-center px-6">
-        <div class="flex items-center gap-2">
-            <span class="bg-blue-600 p-1 rounded font-bold">G</span>
-            <span class="font-black italic text-xl">ULTRA <span class="text-blue-500 text-sm">PRO</span></span>
+    <nav class="h-14 bg-slate-900 border-b border-slate-800 flex justify-between items-center px-6">
+        <div class="flex items-center gap-3">
+            <div class="bg-blue-600 text-white px-2 py-0.5 rounded font-black italic text-xs">V18</div>
+            <h1 class="font-bold text-xs tracking-widest uppercase">Export Suite</h1>
         </div>
-        <div class="flex gap-2">
-            <button onclick="document.getElementById('vidInp').click()" class="bg-blue-600 hover:bg-blue-500 px-4 py-2 rounded text-xs font-bold">+ IMPORT VIDEO</button>
-            <button onclick="startProcessing()" id="renderBtn" class="bg-green-600 hover:bg-green-500 px-6 py-2 rounded text-xs font-black shadow-lg shadow-green-900/20">RENDER & DOWNLOAD</button>
+        
+        <div class="flex items-center gap-4">
+            <div class="flex items-center gap-2 bg-slate-800 p-1.5 rounded-lg border border-slate-700">
+                <span class="text-[9px] font-bold text-slate-400 pl-2 uppercase">Quality:</span>
+                <select id="resSelect" class="bg-slate-900 text-[10px] font-bold px-3 py-1 rounded border border-slate-700 text-blue-400">
+                    <option value="3840:2160">4K (Ultra HD)</option>
+                    <option value="2560:1440">2K (Quad HD)</option>
+                    <option value="1920:1080" selected>1080p (Full HD)</option>
+                    <option value="1280:720">720p (HD)</option>
+                </select>
+            </div>
+            
+            <button onclick="document.getElementById('vidIn').click()" class="bg-slate-800 text-[10px] font-bold px-4 py-2 rounded">+ VIDEO</button>
+            <button onclick="document.getElementById('audIn').click()" class="bg-amber-600/20 text-amber-500 border border-amber-500/30 text-[10px] font-bold px-4 py-2 rounded">+ BGM</button>
+            <button onclick="renderFinalMaster()" class="bg-blue-600 text-[10px] font-black px-6 py-2 rounded shadow-lg shadow-blue-500/20 hover:bg-blue-500">RENDER & DOWNLOAD</button>
         </div>
-        <input type="file" id="vidInp" multiple hidden accept="video/*" onchange="handleFiles(this.files)">
+        <input type="file" id="vidIn" multiple hidden onchange="importVideos(this.files)">
+        <input type="file" id="audIn" accept="audio/*" hidden onchange="importBGM(this.files)">
     </nav>
 
     <div class="flex flex-1 overflow-hidden">
-        <aside class="w-72 bg-slate-900 border-r border-slate-800 p-4 space-y-6">
-            <h2 class="text-[10px] font-bold text-slate-500 tracking-widest uppercase">Clip Settings</h2>
-            
-            <div id="inspector" class="hidden space-y-4">
-                <div>
-                    <label class="text-[10px] text-slate-400">TEXT OVERLAY</label>
-                    <input type="text" id="t_text" class="w-full bg-black border border-slate-700 p-2 rounded text-sm mt-1" oninput="saveData()">
-                </div>
-                <div>
-                    <label class="text-[10px] text-slate-400">FILTER</label>
-                    <select id="t_filter" class="w-full bg-black border border-slate-700 p-2 rounded text-sm mt-1" onchange="saveData()">
-                        <option value="none">Normal</option>
-                        <option value="bw">Black & White</option>
-                        <option value="sepia">Sepia Vintage</option>
-                    </select>
-                </div>
-                <div>
-                    <label class="text-[10px] text-slate-400">SPEED (0.5x - 2.0x)</label>
-                    <input type="range" id="t_speed" min="0.5" max="2" step="0.1" value="1" class="w-full" oninput="saveData()">
-                    <div id="speedVal" class="text-[10px] text-center text-blue-400">1.0x</div>
+        <aside class="w-80 bg-slate-900 border-r border-slate-800 p-5 overflow-y-auto space-y-6">
+            <div id="audioTrackBox" class="hidden p-4 bg-amber-600/10 border border-amber-600/30 rounded-xl space-y-3">
+                <p class="text-[10px] font-bold text-amber-500 uppercase">Music Engine</p>
+                <input type="range" id="bgmVol" min="0" max="1" step="0.1" value="0.5" class="w-full" oninput="syncLive()">
+                <div class="flex gap-4 text-[9px]">
+                    <label class="flex items-center gap-1"><input type="checkbox" id="fIn"> FADE IN</label>
+                    <label class="flex items-center gap-1"><input type="checkbox" id="fOut"> FADE OUT</label>
                 </div>
             </div>
-            <div id="placeholder" class="text-slate-600 text-xs italic">Select a clip to edit...</div>
+
+            <div id="inspector" class="hidden space-y-6">
+                <label class="text-[10px] text-blue-400 font-bold uppercase tracking-widest">Presets</label>
+                <div class="grid grid-cols-2 gap-2">
+                    <button onclick="setFx('none')" class="bg-slate-800 text-[9px] p-2 rounded">Original</button>
+                    <button onclick="setFx('cyberpunk')" class="bg-slate-800 text-[9px] p-2 rounded">Cyberpunk</button>
+                    <button onclick="setFx('vintage')" class="bg-slate-800 text-[9px] p-2 rounded">1970s</button>
+                    <button onclick="setFx('golden')" class="bg-slate-800 text-[9px] p-2 rounded">Golden</button>
+                </div>
+                <div class="space-y-4 pt-4 border-t border-white/5">
+                    <div class="flex justify-between text-[10px]"><span>Clip Volume</span><span id="cVolVal">100%</span></div>
+                    <input type="range" id="cVol" min="0" max="2" step="0.1" value="1" class="w-full" oninput="save()">
+                </div>
+            </div>
         </aside>
 
-        <main class="flex-1 flex flex-col relative">
-            <div class="flex-1 flex items-center justify-center p-6 bg-black">
-                <video id="mainPlayer" class="max-h-full rounded border border-slate-800 shadow-2xl" controls></video>
+        <main class="flex-1 flex flex-col bg-black relative">
+            <div class="flex-1 flex items-center justify-center p-8">
+                <video id="player" class="max-h-full rounded shadow-2xl transition-all" controls></video>
+                <audio id="bgmPlayer" loop></audio>
                 
-                <div id="renderOverlay" class="hidden absolute inset-0 bg-slate-950/90 z-50 flex flex-col items-center justify-center">
-                    <div class="w-64 h-1.5 bg-slate-800 rounded-full overflow-hidden">
+                <div id="renderUI" class="hidden absolute inset-0 bg-slate-950/95 z-50 flex flex-col items-center justify-center">
+                    <div class="w-64 h-1 bg-slate-800 rounded-full overflow-hidden mb-6">
                         <div id="pBar" class="w-0 h-full bg-blue-500 transition-all duration-300"></div>
                     </div>
-                    <p id="pStatus" class="mt-4 font-mono text-xs text-blue-400 animate-pulse">Initializing Engine...</p>
+                    <p id="pStatus" class="font-mono text-[10px] text-blue-400 animate-pulse uppercase tracking-[0.3em]">Encoding <span id="resTag">1080p</span> Master...</p>
                 </div>
             </div>
-
-            <div class="h-48 bg-slate-900 border-t border-slate-800 p-4">
-                <p class="text-[10px] text-slate-500 font-bold mb-3 uppercase tracking-tighter">Timeline Track</p>
-                <div id="timeline" class="flex gap-4 overflow-x-auto timeline-scroll h-24 items-center px-2">
-                    </div>
-            </div>
+            <div class="h-40 bg-slate-900 border-t border-slate-800 p-4 flex gap-4 overflow-x-auto scroll-hide" id="timeline"></div>
         </main>
     </div>
 
     <script>
         const { createFFmpeg, fetchFile } = FFmpeg;
-        // SINGLE THREADED MODE FOR BROWSER COMPATIBILITY
         const ffmpeg = createFFmpeg({ log: true });
         let clips = [];
         let activeIdx = -1;
 
-        async function initFFmpeg() {
-            try {
-                if (!ffmpeg.isLoaded()) await ffmpeg.load();
-                console.log("FFmpeg Loaded Successfully");
-            } catch (e) {
-                alert("FFmpeg Load Error: Use Chrome or Local Server (Live Server)");
-            }
-        }
-        initFFmpeg();
+        async function init() { await ffmpeg.load(); }
+        init();
 
-        function handleFiles(files) {
+        const v = document.getElementById('player');
+        const a = document.getElementById('bgmPlayer');
+
+        v.onplay = () => { if(a.src) a.play(); };
+        v.onpause = () => a.pause();
+        v.onseeking = () => { if(a.src) a.currentTime = v.currentTime; };
+
+        function importVideos(files) {
             for (let f of files) {
-                clips.push({
-                    file: f,
-                    url: URL.createObjectURL(f),
-                    name: f.name,
-                    text: '',
-                    filter: 'none',
-                    speed: 1.0
-                });
+                clips.push({ file: f, url: URL.createObjectURL(f), start: 0, end: 5, vol: 1.0, fx: 'none' });
             }
-            renderTimeline();
+            renderTL();
         }
 
-        function renderTimeline() {
+        function importBGM(files) {
+            a.src = URL.createObjectURL(files[0]);
+            document.getElementById('audioTrackBox').classList.remove('hidden');
+            syncLive();
+        }
+
+        function renderTL() {
             const tl = document.getElementById('timeline');
             tl.innerHTML = '';
             clips.forEach((c, i) => {
                 const div = document.createElement('div');
-                div.className = `min-w-[150px] h-16 rounded bg-slate-800 p-2 cursor-pointer border ${activeIdx === i ? 'clip-active' : 'border-slate-700'}`;
-                div.innerHTML = `<div class="text-[9px] truncate">${c.name}</div><div class="text-[8px] text-blue-400 mt-2">${c.filter} | ${c.speed}x</div>`;
-                div.onclick = () => selectClip(i);
+                div.className = `min-w-[140px] h-20 bg-slate-800 rounded p-3 cursor-pointer border border-slate-700 ${activeIdx === i ? 'clip-active' : ''}`;
+                div.innerHTML = `<p class="text-[9px] truncate uppercase font-black">${c.file.name}</p>`;
+                div.onclick = () => select(i);
                 tl.appendChild(div);
             });
         }
 
-        function selectClip(i) {
+        function select(i) {
             activeIdx = i;
-            const c = clips[i];
-            document.getElementById('mainPlayer').src = c.url;
-            document.getElementById('placeholder').classList.add('hidden');
+            v.src = clips[i].url;
+            v.className = `max-h-full rounded shadow-2xl insta-${clips[i].fx}`;
             document.getElementById('inspector').classList.remove('hidden');
-            
-            document.getElementById('t_text').value = c.text;
-            document.getElementById('t_filter').value = c.filter;
-            document.getElementById('t_speed').value = c.speed;
-            document.getElementById('speedVal').innerText = c.speed + 'x';
-            renderTimeline();
+            renderTL();
         }
 
-        function saveData() {
-            if (activeIdx === -1) return;
-            clips[activeIdx].text = document.getElementById('t_text').value;
-            clips[activeIdx].filter = document.getElementById('t_filter').value;
-            clips[activeIdx].speed = document.getElementById('t_speed').value;
-            document.getElementById('speedVal').innerText = clips[activeIdx].speed + 'x';
-            renderTimeline();
+        function setFx(fx) {
+            if(activeIdx === -1) return;
+            clips[activeIdx].fx = fx;
+            v.className = `max-h-full rounded shadow-2xl transition-all duration-300 insta-${fx}`;
+            renderTL();
         }
 
-        // REAL PERFORMANCE: FFmpeg Command Execution
-        async function startProcessing() {
-            if (clips.length === 0) return alert("Please import a video first!");
-            
-            const overlay = document.getElementById('renderOverlay');
-            const status = document.getElementById('pStatus');
-            const bar = document.getElementById('pBar');
-            
-            overlay.classList.remove('hidden');
-            status.innerText = "Loading assets into memory...";
+        function syncLive() { a.volume = document.getElementById('bgmVol').value; }
+        function save() { 
+            clips[activeIdx].vol = document.getElementById('cVol').value;
+            document.getElementById('cVolVal').innerText = Math.round(clips[activeIdx].vol*100) + "%";
+        }
+
+        async function renderFinalMaster() {
+            if(clips.length === 0) return;
+            const res = document.getElementById('resSelect').value;
+            document.getElementById('resTag').innerText = res.split(':')[1] + 'p';
+            document.getElementById('renderUI').classList.remove('hidden');
 
             try {
-                // 1. Write files to FFmpeg Virtual System
-                for (let i = 0; i < clips.length; i++) {
-                    ffmpeg.FS('writeFile', `input${i}.mp4`, await fetchFile(clips[i].file));
+                for(let i=0; i<clips.length; i++) {
+                    ffmpeg.FS('writeFile', `v${i}.mp4`, await fetchFile(clips[i].file));
                 }
 
-                // 2. Build Complex Filter for REAL Processing
-                // This chain handles Scaling, Filters, Speed, and Text in one go
-                let filterStr = "";
-                for (let i = 0; i < clips.length; i++) {
-                    let vTag = `[${i}:v]`;
-                    let fx = `scale=1280:720,setsar=1`;
-                    
-                    if (clips[i].filter === 'bw') fx += `,hue=s=0`;
-                    if (clips[i].filter === 'sepia') fx += `,colorchannelmixer=.393:.769:.189:0:.349:.686:.168:0:.272:.534:.131`;
-                    
-                    fx += `,setpts=${1/clips[i].speed}*PTS`;
-                    
-                    if (clips[i].text) {
-                        // drawtext works if fonts are loaded, using simple box for fallback
-                        fx += `,drawtext=text='${clips[i].text}':x=(w-text_w)/2:y=h-80:fontsize=40:fontcolor=white:box=1:boxcolor=black@0.5`;
-                    }
-                    
-                    filterStr += `${vTag}${fx}[v${i}out]; [${i}:a]atempo=${clips[i].speed}[a${i}out]; `;
-                }
-
-                // Concatenate everything
+                let filter = "";
                 let concat = "";
-                for (let i = 0; i < clips.length; i++) concat += `[v${i}out][a${i}out]`;
-                filterStr += `${concat}concat=n=${clips.length}:v=1:a=1[vfinal][afinal]`;
+                let totalDur = clips.length * 5;
 
-                status.innerText = "FFmpeg: Rendering Frames (Pixel Processing)...";
-                bar.style.width = "50%";
+                for(let i=0; i<clips.length; i++) {
+                    const c = clips[i];
+                    // RESOLUTION SCALING LOGIC
+                    let vFx = `scale=${res}:force_original_aspect_ratio=decrease,pad=${res}:(ow-iw)/2:(oh-ih)/2,setsar=1`;
+                    if(c.fx === 'cyberpunk') vFx += `,hue=h=160:s=1.8`;
+                    if(c.fx === 'vintage') vFx += `,sepia=0.6`;
+                    if(c.fx === 'golden') vFx += `,hue=h=-15:s=2.5`;
 
-                // 3. EXECUTE REAL COMMAND
-                await ffmpeg.run(
-                    ...clips.flatMap((_, i) => ['-i', `input${i}.mp4`]),
-                    '-filter_complex', filterStr,
-                    '-map', '[vfinal]', '-map', '[afinal]',
-                    '-c:v', 'libx264',
-                    '-preset', 'ultrafast',
-                    'output.mp4'
-                );
+                    filter += `[${i}:v]${vFx}[v${i}o]; [${i}:a]volume=${c.vol}[a${i}o]; `;
+                    concat += `[v${i}o][a${i}o]`;
+                }
 
-                // 4. DOWNLOAD RESULT
-                status.innerText = "Finalizing File...";
-                bar.style.width = "100%";
-                
-                const data = ffmpeg.FS('readFile', 'output.mp4');
-                const url = URL.createObjectURL(new Blob([data.buffer], { type: 'video/mp4' }));
-                
+                filter += `${concat}concat=n=${clips.length}:v=1:a=1[vpre][apre];`;
+
+                let inputs = clips.flatMap((_,i)=>['-i', `v${i}.mp4`]);
+                if(a.src) {
+                    ffmpeg.FS('writeFile', 'm.mp3', await fetchFile(a.src));
+                    inputs.push('-i', 'm.mp3');
+                    let bgmFx = `volume=${document.getElementById('bgmVol').value}`;
+                    if(document.getElementById('fIn').checked) bgmFx += `,afade=t=in:ss=0:d=2`;
+                    if(document.getElementById('fOut').checked) bgmFx += `,afade=t=out:st=${totalDur-2}:d=2`;
+                    filter += `[${clips.length}:a]${bgmFx}[bgm_f]; [apre][bgm_f]amix=inputs=2:duration=first[afinal]`;
+                } else {
+                    filter += `[apre]copy[afinal]`;
+                }
+
+                // High Quality Encoding Settings
+                await ffmpeg.run(...inputs, '-filter_complex', filter, '-map', '[vpre]', '-map', '[afinal]', '-c:v', 'libx264', '-crf', '18', '-preset', 'ultrafast', 'out.mp4');
+
+                const data = ffmpeg.FS('readFile', 'out.mp4');
                 const link = document.createElement('a');
-                link.href = url;
-                link.download = "Gemini_Ultra_Edit.mp4";
+                link.href = URL.createObjectURL(new Blob([data.buffer], {type:'video/mp4'}));
+                link.download = `Gemini_Master_${res.split(':')[1]}p.mp4`;
                 link.click();
-
-            } catch (err) {
-                console.error(err);
-                alert("FFmpeg Error: " + err.message);
-            } finally {
-                overlay.classList.add('hidden');
-                bar.style.width = "0%";
-            }
+            } catch (e) { console.error(e); }
+            finally { document.getElementById('renderUI').classList.add('hidden'); }
         }
     </script>
 </body>
